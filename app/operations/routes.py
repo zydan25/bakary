@@ -239,6 +239,7 @@ def recipient_detail(recipient_id):
         recipient=recipient,
         history=history,
         total_quantity=total,
+        can_delete_recipient=not any(row.period.status == "closed" for row in history),
         period_label=period_label,
     )
 
