@@ -12,12 +12,12 @@ Python 3.10+، PostgreSQL، وPM2 للنشر. يلزم HTTPS لتثبيت PWA ف
 
 ```sql
 CREATE USER bakary WITH LOGIN;
-\\password bakary
+\password bakary
 CREATE DATABASE bakary OWNER bakary;
 GRANT ALL PRIVILEGES ON DATABASE bakary TO bakary;
 ```
 
-سيطلب الأمر `\\password` إدخال كلمة مرور المستخدم وإعادة تأكيدها. استخدم كلمة المرور المحلية التي حددتها للمشروع، ولا تستخدم كلمة مرور التطوير نفسها على خادم مكشوف للإنترنت.
+سيطلب الأمر `\password` إدخال كلمة مرور المستخدم وإعادة تأكيدها. استخدم كلمة المرور المحلية التي حددتها للمشروع، ولا تستخدم كلمة مرور التطوير نفسها على خادم مكشوف للإنترنت.
 
 اختبر الاتصال:
 
