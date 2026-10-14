@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ party.name }}{% endblock %}
+{% block page_heading %}{{ party.name }}{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">{{ 'الموزعون' if party_type == 'distributor' else 'العملاء' }}</p><h1>{{ party.name }}</h1><p class="heading-subtitle">{{ party.phone or 'لا يوجد رقم هاتف' }}{% if party.notes %} · {{ party.notes }}{% endif %}</p></div>
+ <div class="heading-actions">
+  <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">رجوع للقائمة</a>
+  {% if current_user.has_permission('distribution.issue') %}<a class="secondary-button" href="{{ url_for('distribution.issue',party_type=party_type,party_id=party.id) }}">صرف</a>{% endif %}
+  {% if current_user.has_permission('distribution.payment') %}<a class="secondary-button" href="{{ url_for('distribution.payment',party_type=party_type,party_id=party.id) }}">دفع نقدي</a>{% endif %}
+  {% if can_manage %}<a class="primary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers',action='edit',edit=party.id) }}">تعديل البيانات والأسعار</a>{% endif %}
+ </div>
+</section>
+<section class="report-totals-grid">
+ <div><small>الرصيد الحالي</small><strong>{{ "{:,.2f}".format(balance|abs) }} ريال {{ 'عليه' if balance > 0 else ('له' if balance < 0 else 'متزن') }}</strong></div>
+ <div><small>عمليات الصرف</small><strong>{{ issue_rows|length }}</strong></div>
+ <div><small>عمليات الدفع</small><strong>{{ payment_rows|length }}</strong></div>
+ <div><small>الأصناف بأسعار خاصة</small><strong>{{ party.prices|length }}</strong></div>
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>الأسعار الحالية حسب الصنف</h2><p>الأسعار المطبقة على هذا الحساب وقت الصرف.</p></div></div>
+ {% for price in party.prices|sort(attribute='product.name') %}
+ <div class="product-history-row"><div><strong>{{ price.product.name }}</strong><small>{{ price.product.unit_label }} · {{ 'سعر خاص' if price.is_custom else 'السعر العام' }}</small></div><strong>{{ "{:,.2f}".format(price.unit_price) }} ريال</strong></div>
+ {% else %}<p class="product-muted-empty">لا توجد أسعار مسجلة بعد.</p>{% endfor %}
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>آخر حركات الصرف</h2></div></div>
+ {% for row in issue_rows %}<div class="product-history-row"><div><strong>{{ row.product.name }} · {{ row.quantity }} {{ row.product.unit_label }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.statement or '' }}</small></div><strong>{{ "{:,.2f}".format(row.total_amount) }} ريال</strong></div>
+ {% else %}<p class="product-muted-empty">لا توجد حركات صرف بعد.</p>{% endfor %}
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>آخر حركات الدفع</h2></div></div>
+ {% for row in payment_rows %}<div class="product-history-row"><div><strong>دفعة رقم {{ row.id }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.statement or '' }}</small></div><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>
+ {% else %}<p class="product-muted-empty">لا توجد حركات دفع بعد.</p>{% endfor %}
+</section>
+{% endblock %}
