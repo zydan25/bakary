@@ -1,6 +1,7 @@
 """Cash-account balances, expenses, and transfers kept in a transaction."""
 
 from datetime import date
+from uuid import uuid4
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from sqlalchemy import case, func, select
@@ -70,7 +71,7 @@ def create_cash_account(*, name, code, account_type="cash", actor_id=None):
         raise FinanceRuleError("يوجد حساب بنفس الرمز أو الاسم.") from exc
 
 
-def create_expense(*, title, amount, cash_account_id, business_date=None, statement=None, period_id=None, actor_id=None):
+def create_expense(*, title, amount, cash_account_id, business_date=None, statement=None, period_id=None, actor_id=None, request_key=None):
     amount = money(amount)
     title = (title or "").strip()
     if not title:
@@ -85,6 +86,9 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
         raise FinanceRuleError("الحساب النقدي غير موجود أو موقوف.")
     if cash_account_balance(account.id) < amount:
         raise FinanceRuleError("رصيد الحساب لا يكفي لتسجيل هذا المصروف.")
+    key = (request_key or "").strip()
+    if not key:
+        raise FinanceRuleError("انتهت صلاحية نموذج المصروف. أعد فتحه وحاول مجددًا.")
     expense = Expense(
         title=title,
         amount=amount,
@@ -118,7 +122,7 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
         raise
 
 
-def create_cash_transfer(*, source_account_id, target_account_id, amount, business_date=None, statement=None, actor_id=None):
+def create_cash_transfer(*, source_account_id, target_account_id, amount, business_date=None, statement=None, actor_id=None, request_key=None):
     amount = money(amount)
     if source_account_id == target_account_id:
         raise FinanceRuleError("اختر حسابين مختلفين للتحويل.")
@@ -139,7 +143,14 @@ def create_cash_transfer(*, source_account_id, target_account_id, amount, busine
     if cash_account_balance(source.id) < amount:
         raise FinanceRuleError("رصيد حساب المصدر لا يكفي للتحويل.")
 
+    key = (request_key or "").strip()
+    if not key:
+        raise FinanceRuleError("انتهت صلاحية نموذج التحويل. أعد فتحه وحاول مجددًا.")
+    prior = db.session.scalar(select(CashTransfer).where(CashTransfer.request_key == key))
+    if prior is not None:
+        return prior, False
     transfer = CashTransfer(
+        request_key=key,
         source_account_id=source.id,
         target_account_id=target.id,
         amount=amount,
@@ -179,6 +190,9 @@ def create_cash_transfer(*, source_account_id, target_account_id, amount, busine
         return transfer
     except IntegrityError as exc:
         db.session.rollback()
+        prior = db.session.scalar(select(CashTransfer).where(CashTransfer.request_key == key))
+        if prior is not None:
+            return prior, False
         raise FinanceRuleError("تعذر حفظ التحويل؛ لم يتم تكراره.") from exc
     except Exception:
         db.session.rollback()
