@@ -38,20 +38,7 @@
       </div>
 
       <nav class="tree-nav">
-        <section class="tree-section" data-nav-section="home">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="true">
-            <span class="nav-symbol">⌂</span><span class="tree-heading-title">الرئيسية</span>
-            <span class="tree-chevron" aria-hidden="true">‹</span>
-          </button>
-          <div class="tree-children">
-            <a class="tree-link" data-nav-link href="{{ url_for('dashboard.index') }}">
-              <span class="child-symbol">▦</span><span>لوحة التحكم</span>
-            </a>
-            <a class="tree-link" data-nav-link href="{{ url_for('auth.account') }}">
-              <span class="child-symbol">◉</span><span>حسابي</span>
-            </a>
-          </div>
-        </section>
+        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('dashboard.index') }}"><span class="nav-symbol">⌂</span><span>الرئيسية</span></a>
 
         {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
         <section class="tree-section" data-nav-section="catalog">
@@ -74,21 +61,14 @@
 
         {% if current_user.has_permission('parties.view') or current_user.has_permission('parties.manage') %}
         <section class="tree-section" data-nav-section="parties">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
-            <span class="nav-symbol">♧</span><span class="tree-heading-title">الموزعون والعملاء</span>
-            <span class="tree-chevron" aria-hidden="true">‹</span>
-          </button>
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♧</span><span class="tree-heading-title">الموزعون والعملاء</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
           <div class="tree-children" hidden>
-            <a class="tree-link" data-nav-link href="{{ url_for('parties.distributors') }}">
-              <span class="child-symbol">♙</span><span>الموزعون</span>
-            </a>
-            <a class="tree-link" data-nav-link href="{{ url_for('parties.customers') }}">
-              <span class="child-symbol">♧</span><span>العملاء والنقاط</span>
-            </a>
+            <a class="tree-link" data-nav-link href="{{ url_for('parties.index') }}"><span class="child-symbol">♧</span><span>الموزعون والعملاء</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('parties.distributors') }}"><span class="child-symbol">♙</span><span>الموزعون فقط</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('parties.customers') }}"><span class="child-symbol">♧</span><span>العملاء فقط</span></a>
           </div>
         </section>
         {% endif %}
-
         {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
         <section class="tree-section" data-nav-section="distribution">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
@@ -107,6 +87,9 @@
             {% if current_user.has_permission('distribution.reports') %}
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_report', party_type='distributor') }}"><span class="child-symbol">▤</span><span>تقرير صرف الموزعين</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_report', party_type='customer') }}"><span class="child-symbol">▤</span><span>تقرير صرف العملاء</span></a>
+            {% endif %}
+            {% if current_user.has_permission('free_distribution.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('operations.free_distribution') }}"><span class="child-symbol">♡</span><span>التوزيع المجاني</span></a>
             {% endif %}
           </div>
         </section>
@@ -151,16 +134,10 @@
         </section>
         {% endif %}
         {% if current_user.has_permission('handover.manage') %}
-        <section class="tree-section" data-nav-section="closing">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">✓</span><span class="tree-heading-title">إقفال الفترة والتسليم</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
-          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="child-symbol">✓</span><span>التقرير والتسليم النقدي</span></a></div>
-        </section>
+        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="nav-symbol">✓</span><span>إقفال الفترة والتسليم</span></a>
         {% endif %}
         {% if current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('distribution.reports') %}
-        <section class="tree-section" data-nav-section="reports">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">▤</span><span class="tree-heading-title">التقارير</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
-          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('reports.index') }}"><span class="child-symbol">▤</span><span>مركز التقارير</span></a></div>
-        </section>
+        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('reports.index') }}"><span class="nav-symbol">▤</span><span>التقارير</span></a>
         {% endif %}
         {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') or current_user.has_permission('cash.accounts.manage') %}
         <section class="tree-section" data-nav-section="finance">
@@ -178,22 +155,17 @@
           </div>
         </section>
         {% endif %}
-        {% if current_user.has_permission('settings.manage') %}
-        <section class="tree-section" data-nav-section="settings">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">⚙</span><span class="tree-heading-title">إعدادات النظام</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
-          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('settings.index') }}"><span class="child-symbol">⚙</span><span>إعدادات المخبز</span></a></div>
-        </section>
-        {% endif %}
-        {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
-        <section class="tree-section" data-nav-section="staff">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♙</span><span class="tree-heading-title">الموظفون والصلاحيات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
+        {% if current_user.has_permission('settings.manage') or current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
+        <section class="tree-section" data-nav-section="admin">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">⚙</span><span class="tree-heading-title">الإدارة</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
           <div class="tree-children" hidden>
+            {% if current_user.has_permission('settings.manage') %}<a class="tree-link" data-nav-link href="{{ url_for('settings.index') }}"><span class="child-symbol">⚙</span><span>الإعدادات</span></a>{% endif %}
             {% if current_user.has_permission('employees.manage') %}<a class="tree-link" data-nav-link href="{{ url_for('staff.employees') }}"><span class="child-symbol">♙</span><span>الموظفون</span></a>{% endif %}
             {% if current_user.has_permission('users.manage') %}<a class="tree-link" data-nav-link href="{{ url_for('staff.roles') }}"><span class="child-symbol">☷</span><span>الأدوار والصلاحيات</span></a>{% endif %}
+            <a class="tree-link" data-nav-link href="{{ url_for('auth.account') }}"><span class="child-symbol">◉</span><span>حسابي</span></a>
           </div>
         </section>
         {% endif %}
-
       </nav>
 
       <div class="sidebar-footer">
@@ -241,11 +213,13 @@
       </main>
 
       {% if current_user.is_authenticated %}
+      {% if show_bottom_nav %}
       <nav class="bottom-nav" aria-label="التنقل السريع">
         <a data-bottom-link href="{{ url_for('dashboard.index') }}"><span>⌂</span><small>الرئيسية</small></a>
         <button type="button" data-open-drawer><span>☷</span><small>القائمة</small></button>
         <a data-bottom-link href="{{ url_for('auth.account') }}"><span>◉</span><small>حسابي</small></a>
       </nav>
+      {% endif %}
       {% endif %}
     </div>
   </div>
