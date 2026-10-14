@@ -37,9 +37,6 @@ def create_dough_batch(
     produced_quantity,
     business_date,
     period_code="daily",
-    flour_mode="none",
-    flour_item_id=None,
-    flour_quantity=None,
     statement=None,
     actor_id=None,
     idempotency_key,
@@ -55,8 +52,6 @@ def create_dough_batch(
         return prior, False
 
     produced = _quantity(produced_quantity, "الكمية المنتجة")
-    if flour_mode not in {"none", "per_batch"}:
-        raise ProductionRuleError("طريقة احتساب الدقيق غير صالحة.")
 
     try:
         period, _created = get_or_create_open_period(
@@ -73,65 +68,16 @@ def create_dough_batch(
     if product is None:
         raise ProductionRuleError("الصنف المخبوز غير موجود أو موقوف.")
 
-    flour_item = None
-    flour_qty = None
-    if flour_mode == "per_batch":
-        if not flour_item_id:
-            raise ProductionRuleError("اختر مادة الدقيق قبل تسجيل استهلاك العجنة.")
-        if flour_quantity is None:
-            raise ProductionRuleError("أدخل كمية الدقيق المستهلكة لهذه العجنة.")
-        flour_qty = _quantity(flour_quantity, "كمية الدقيق")
-        flour_item = db.session.scalar(
-            select(InventoryItem)
-            .where(InventoryItem.id == flour_item_id, InventoryItem.is_active.is_(True))
-            .with_for_update()
-        )
-        if flour_item is None:
-            raise ProductionRuleError("مادة الدقيق غير موجودة أو موقوفة.")
-
-        aggregate_usage = db.session.scalar(
-            select(PeriodIngredientUsage).where(
-                PeriodIngredientUsage.period_id == period.id,
-                PeriodIngredientUsage.item_id == flour_item.id,
-            )
-        )
-        if aggregate_usage is not None:
-            raise ProductionRuleError(
-                "تم تسجيل إجمالي الدقيق لهذه الفترة. لا يمكن مزجه مع تسجيل الدقيق لكل عجنة."
-            )
-        available = inventory_balance(flour_item.id)
-        if available < flour_qty:
-            raise ProductionRuleError(
-                f"كمية الدقيق غير كافية. المتوفر {available} {flour_item.unit_label}."
-            )
-
     batch = DoughBatch(
         period_id=period.id,
         product_id=product.id,
         produced_quantity=produced,
-        flour_quantity=flour_qty,
-        flour_item_id=flour_item.id if flour_item else None,
         statement=(statement or "").strip() or None,
         idempotency_key=key,
         created_by_id=actor_id,
     )
     try:
         db.session.add(batch)
-        db.session.flush()
-        if flour_item is not None and flour_qty is not None:
-            db.session.add(
-                InventoryMovement(
-                    item_id=flour_item.id,
-                    movement_type="production_consumption",
-                    direction="out",
-                    quantity=flour_qty,
-                    business_date=period.business_date,
-                    source_type="dough_batch",
-                    source_id=batch.id,
-                    statement=f"استهلاك الدقيق للعجنة رقم {batch.id}",
-                    created_by_id=actor_id,
-                )
-            )
         db.session.commit()
         return batch, True
     except IntegrityError:
