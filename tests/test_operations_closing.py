@@ -13,7 +13,7 @@ from app.models.finance import CashAccount, CashMovement
 from app.models.free_distribution import FreeDistribution, FreeRecipient
 from app.models.production import BusinessPeriod
 from app.models.product import Product
-from app.models.role import Role
+from app.models.role import Permission, Role
 from app.models.user import User
 from app.services.closing import ClosingRuleError, close_period_with_handover
 from app.services.production import create_dough_batch
@@ -24,9 +24,17 @@ def setup():
     with app.app_context():
         db.create_all()
         owner_role = Role(name="المالك للإقفال", code="owner", is_system=True)
+        receiver_role = Role(name="المستلم", code="receiver", is_system=True)
+        handover_permission = Permission(
+            name="تسجيل التسليمات", code="handover.manage", description="تسليم الفترة"
+        )
+        receiver_role.permissions.append(handover_permission)
         owner = User(full_name="مدير المخبز", phone="+967771234567", is_active=True)
         owner.set_password("Strong-pass-123")
         owner.roles.append(owner_role)
+        receiver = User(full_name="المستلم", phone="+967777111222", is_active=True)
+        receiver.set_password("Receiver-pass-123")
+        receiver.roles.append(receiver_role)
         product = Product(
             name="روتي", code="ROTI", unit_label="حبة", is_default=True,
             is_active=True, default_distributor_price=Decimal("8.00"),
@@ -34,7 +42,7 @@ def setup():
         )
         cash = CashAccount(code="MAIN", name="الصندوق الرئيسي", account_type="cash", is_main=True, is_active=True)
         employee = Employee(full_name="مسؤول البيع", phone="+967777123456", job_title="مستلم", is_active=True, created_by_id=1)
-        db.session.add_all([owner_role, owner, product, cash, employee])
+        db.session.add_all([owner_role, receiver_role, handover_permission, owner, receiver, product, cash, employee])
         db.session.commit()
         ids = (owner.id, product.id, employee.id)
     return app, ids
@@ -119,5 +127,20 @@ def test_free_distribution_and_closing_screens_render_for_owner():
         assert response.status_code == 200
         assert client.get("/operations/free-distribution/").status_code == 200
         assert client.get("/operations/closing/").status_code == 200
+    finally:
+        cleanup(app)
+
+
+
+def test_receiver_role_can_open_handover_without_production_edit_permission():
+    app, _ids = setup()
+    try:
+        client = app.test_client()
+        response = client.post("/auth/login", data={
+            "phone": "+967777111222", "password": "Receiver-pass-123"
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert client.get("/operations/closing/").status_code == 200
+        assert client.get("/production/").status_code == 403
     finally:
         cleanup(app)
