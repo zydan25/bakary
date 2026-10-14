@@ -64,12 +64,20 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     products = db.session.scalars(
         select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
     ).all()
-    period = db.session.scalar(
+    open_periods = selectable_open_periods(actor_id=current_user.id)
+    requested_period_id = request.args.get("period_id", type=int)
+    period = db.session.get(BusinessPeriod, requested_period_id) if requested_period_id else db.session.scalar(
         select(BusinessPeriod).where(
             BusinessPeriod.business_date == selected_date,
             BusinessPeriod.period_code == selected_code,
+            BusinessPeriod.status == "open",
         )
     )
+    if period is None or period.status != "open":
+        period = next((row for row in open_periods if row.business_date == selected_date and row.period_code == selected_code), None)
+    if period is None and open_periods:
+        period = open_periods[0]
+        selected_date, selected_code = period.business_date, period.period_code
     records = []
     if period:
         records = db.session.scalars(
@@ -81,14 +89,13 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     issue_form = issue_form or FreeIssueForm()
     issue_form.recipient_id.choices = [(0, "اختر المستفيد...")] + [(row.id, row.name) for row in active_recipients]
     issue_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
-    issue_form.period_code.choices = _period_choices()
+    issue_form.period_id.choices = [(row.id, period_option_label(row)) for row in open_periods]
     recipient_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
     default_product = next((row for row in products if row.is_default), products[0] if products else None)
     requested_recipient_id = request.args.get("recipient_id", type=int)
     if request.method == "GET":
         issue_form.recipient_id.data = requested_recipient_id or 0
-        issue_form.business_date.data = selected_date
-        issue_form.period_code.data = selected_code
+        issue_form.period_id.data = period.id if period else (open_periods[0].id if open_periods else 0)
         recipient_form.product_id.data = default_product.id if default_product else 0
         if editing_recipient is not None:
             recipient_form.name.data = editing_recipient.name
@@ -149,6 +156,8 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         issue_form=issue_form,
         selected_recipient=selected_recipient,
         selected_issue_product=selected_product,
+        open_periods=open_periods,
+        period_options=[{"period": row, "label": period_option_label(row)} for row in open_periods],
         editing_recipient=editing_recipient,
         expected_total=sum((row.daily_quantity for row in active_recipients), Decimal("0.000")),
         distributed_total=sum((row.quantity for row in records), Decimal("0.000")),
@@ -295,27 +304,45 @@ def toggle_free_recipient(recipient_id):
 def create_free_issue():
     _require("free_distribution.manage")
     form = FreeIssueForm()
-    # Choices are set before WTForms validates selected values.
-    recipients = db.session.scalars(select(FreeRecipient).where(FreeRecipient.is_active.is_(True)).order_by(FreeRecipient.name.asc())).all()
-    products = db.session.scalars(select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())).all()
+    recipients = db.session.scalars(
+        select(FreeRecipient).where(FreeRecipient.is_active.is_(True)).order_by(FreeRecipient.name.asc())
+    ).all()
+    products = db.session.scalars(
+        select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
+    ).all()
+    open_periods = selectable_open_periods(actor_id=current_user.id)
     form.recipient_id.choices = [(0, "اختر المستفيد...")] + [(row.id, row.name) for row in recipients]
     form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
-    form.period_code.choices = _period_choices()
+    form.period_id.choices = [(row.id, period_option_label(row)) for row in open_periods]
+
+    # Preserve compatibility with older already-open forms that still post date/period_code.
+    if request.method == "POST" and not request.form.get("period_id"):
+        legacy_date = _parse_date(request.form.get("business_date"))
+        legacy_code = _clean_period_code(request.form.get("period_code"))
+        legacy_period = db.session.scalar(select(BusinessPeriod).where(
+            BusinessPeriod.business_date == legacy_date,
+            BusinessPeriod.period_code == legacy_code,
+            BusinessPeriod.status == "open",
+        ))
+        if legacy_period is not None:
+            form.period_id.data = legacy_period.id
+
     if form.validate_on_submit():
         try:
             recipient = db.session.scalar(select(FreeRecipient).where(
-                FreeRecipient.id == form.recipient_id.data, FreeRecipient.is_active.is_(True)
+                FreeRecipient.id == form.recipient_id.data,
+                FreeRecipient.is_active.is_(True),
             ).with_for_update())
             product = db.session.scalar(select(Product).where(
-                Product.id == form.product_id.data, Product.is_active.is_(True)
+                Product.id == form.product_id.data,
+                Product.is_active.is_(True),
             ))
-            if recipient is None or product is None:
-                raise ValueError("المستفيد أو الصنف غير موجود أو موقوف.")
-            period, _created = get_or_create_open_period(
-                business_date=form.business_date.data,
-                period_code=form.period_code.data,
-                actor_id=current_user.id,
-            )
+            period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.id == form.period_id.data,
+                BusinessPeriod.status == "open",
+            ))
+            if recipient is None or product is None or period is None:
+                raise ValueError("المستفيد أو الصنف أو الفترة غير موجود أو غير مفتوح.")
             existing = db.session.scalar(select(FreeDistribution).where(
                 FreeDistribution.period_id == period.id,
                 FreeDistribution.recipient_id == recipient.id,
@@ -323,29 +350,22 @@ def create_free_issue():
             ))
             statement = (form.statement.data or "").strip() or None
             if existing:
-                # A second entry for the same product/recipient in one period edits the
-                # current period quantity instead of violating the period uniqueness rule.
                 existing.quantity = form.quantity.data
                 existing.statement = statement
                 existing.created_by_id = current_user.id
                 flash("تم تحديث كمية الصرف المسجلة لهذا المستفيد في الفترة.", "success")
             else:
-                record = FreeDistribution(
+                db.session.add(FreeDistribution(
                     period_id=period.id,
                     recipient_id=recipient.id,
                     product_id=product.id,
                     quantity=form.quantity.data,
                     statement=statement,
                     created_by_id=current_user.id,
-                )
-                db.session.add(record)
-                flash("تم تسجيل الصرف المجاني واحتسابه ضمن الفترة.", "success")
+                ))
+                flash("تم تسجيل الصرف المجاني ضمن الفترة المحددة.", "success")
             db.session.commit()
-            return redirect(url_for(
-                "operations.free_distribution",
-                date=form.business_date.data.isoformat(),
-                period_code=form.period_code.data,
-            ))
+            return redirect(url_for("operations.free_distribution", period_id=period.id))
         except (ValueError, PeriodRuleError) as exc:
             db.session.rollback()
             flash(str(exc), "error")
