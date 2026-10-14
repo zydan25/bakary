@@ -2,41 +2,88 @@
 {% block title %}حسابي{% endblock %}
 {% block page_heading %}حسابي{% endblock %}
 {% block content %}
-<section class="page-heading-row">
-  <div><p class="eyebrow">الحساب الشخصي</p><h1>حسابي</h1></div>
+<section class="page-heading-row account-page-heading">
+  <div><p class="eyebrow">الحساب الشخصي</p><h1>إعدادات حساب المدير</h1><p class="heading-subtitle">حدّث بيانات الدخول من النوافذ المنفصلة مع تأكيد كلمة المرور الحالية.</p></div>
 </section>
 
-<section class="content-card account-summary">
-  <div class="account-avatar">{{ current_user.full_name[:1] }}</div>
+<section class="content-card account-profile-hero">
+  <div class="account-avatar account-avatar-large">{{ current_user.full_name[:1] }}</div>
   <div class="account-summary-text">
+    <span class="account-status-pill"><span></span> الحساب نشط</span>
     <h2>{{ current_user.full_name }}</h2>
-    <p dir="ltr">{{ current_user.phone }}</p>
-    <div class="role-chip-row">
-      {% for role in current_user.roles %}<span class="role-chip">{{ role.name }}</span>{% endfor %}
-    </div>
+    <p class="account-phone-value" dir="ltr">{{ current_user.phone }}</p>
+    <div class="role-chip-row">{% for role in current_user.roles %}<span class="role-chip">{{ role.name }}</span>{% endfor %}</div>
   </div>
 </section>
 
-<section class="content-card">
-  <div class="section-title"><h2>تغيير كلمة المرور</h2><p>استخدم كلمة مرور لا تقل عن 8 أحرف.</p></div>
-  <form method="post" class="form-stack">
+<section class="account-settings-grid" aria-label="إعدادات الحساب">
+  <button type="button" class="account-setting-card" data-open-dialog="profile-edit-dialog">
+    <span class="account-setting-icon">♙</span>
+    <span class="account-setting-copy"><strong>الاسم ورقم الهاتف</strong><small>تعديل بيانات المدير ورقم تسجيل الدخول</small></span>
+    <span class="account-setting-action">تعديل <b>←</b></span>
+  </button>
+  <button type="button" class="account-setting-card" data-open-dialog="password-edit-dialog">
+    <span class="account-setting-icon account-setting-icon--security">⌑</span>
+    <span class="account-setting-copy"><strong>كلمة المرور</strong><small>تغيير كلمة المرور مع التحقق من كلمة المرور الحالية</small></span>
+    <span class="account-setting-action">تحديث <b>←</b></span>
+  </button>
+</section>
+
+<dialog class="app-form-dialog" id="profile-edit-dialog" aria-labelledby="profile-edit-title" data-auto-open="{{ 'true' if open_dialog == 'profile' else 'false' }}">
+  <div class="app-dialog-header">
+    <div class="app-dialog-mark">♙</div>
+    <div><p class="eyebrow">بيانات الحساب</p><h2 id="profile-edit-title">تعديل الاسم ورقم الهاتف</h2><p>سيُستخدم رقم الهاتف الجديد عند تسجيل الدخول.</p></div>
+    <button type="button" class="app-dialog-close" data-close-dialog aria-label="إغلاق">×</button>
+  </div>
+  <form method="post" class="form-stack account-modal-form" novalidate>
+    {{ profile_form.hidden_tag() }}
+    <input type="hidden" name="action" value="profile">
+    <div class="form-field">
+      {{ profile_form.full_name.label(class_="field-label") }}
+      {{ profile_form.full_name(class_="form-control",autocomplete="name",placeholder="اسم المدير") }}
+      {% for error in profile_form.full_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ profile_form.phone.label(class_="field-label") }}
+      {{ profile_form.phone(class_="form-control",inputmode="tel",autocomplete="tel",dir="ltr",placeholder="+967...") }}
+      {% for error in profile_form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ profile_form.current_password.label(class_="field-label") }}
+      {{ profile_form.current_password(class_="form-control",autocomplete="current-password",placeholder="للتأكد من هويتك") }}
+      {% for error in profile_form.current_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="app-dialog-note">لن تُحفظ التغييرات إلا بعد التحقق من كلمة المرور الحالية.</div>
+    <div class="app-dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ حفظ البيانات...">حفظ البيانات</button><button class="secondary-button" type="button" data-close-dialog>إلغاء</button></div>
+  </form>
+</dialog>
+
+<dialog class="app-form-dialog" id="password-edit-dialog" aria-labelledby="password-edit-title" data-auto-open="{{ 'true' if open_dialog == 'password' else 'false' }}">
+  <div class="app-dialog-header">
+    <div class="app-dialog-mark app-dialog-mark--security">⌑</div>
+    <div><p class="eyebrow">الأمان</p><h2 id="password-edit-title">تغيير كلمة المرور</h2><p>اختر كلمة مرور قوية لا تقل عن 8 أحرف.</p></div>
+    <button type="button" class="app-dialog-close" data-close-dialog aria-label="إغلاق">×</button>
+  </div>
+  <form method="post" class="form-stack account-modal-form" novalidate>
     {{ form.hidden_tag() }}
+    <input type="hidden" name="action" value="password">
     <div class="form-field">
       {{ form.current_password.label(class_="field-label") }}
-      {{ form.current_password(class_="form-control", autocomplete="current-password") }}
+      {{ form.current_password(class_="form-control",autocomplete="current-password") }}
       {% for error in form.current_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
     </div>
     <div class="form-field">
       {{ form.new_password.label(class_="field-label") }}
-      {{ form.new_password(class_="form-control", autocomplete="new-password") }}
+      {{ form.new_password(class_="form-control",autocomplete="new-password") }}
       {% for error in form.new_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
     </div>
     <div class="form-field">
       {{ form.confirm_password.label(class_="field-label") }}
-      {{ form.confirm_password(class_="form-control", autocomplete="new-password") }}
+      {{ form.confirm_password(class_="form-control",autocomplete="new-password") }}
       {% for error in form.confirm_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
     </div>
-    <button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">تحديث كلمة المرور</button>
+    <div class="app-dialog-note">بعد الحفظ، استخدم كلمة المرور الجديدة في تسجيل الدخول القادم.</div>
+    <div class="app-dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ تحديث كلمة المرور...">تحديث كلمة المرور</button><button class="secondary-button" type="button" data-close-dialog>إلغاء</button></div>
   </form>
-</section>
+</dialog>
 {% endblock %}
