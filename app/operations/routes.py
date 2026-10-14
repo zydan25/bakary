@@ -24,6 +24,9 @@ from app.services.closing import (
     preview_period_close,
     close_period_with_handover,
     get_closed_period_summary,
+    get_closed_raw_material_summary,
+    preview_raw_material_balances,
+    calculate_raw_material_close_rows,
 )
 from app.services.periods import PeriodRuleError, get_or_create_open_period, period_label, period_mode, suggested_period_code
 
@@ -203,7 +206,7 @@ def create_free_issue():
     return _free_context(issue_form=form, action="issue")
 
 
-def _closing_context(*, form=None, action=None, selected_date=None, selected_code=None, quantity_inputs=None, calculation=None):
+def _closing_context(*, form=None, action=None, selected_date=None, selected_code=None, quantity_inputs=None, raw_material_inputs=None, calculation=None):
     selected_date = selected_date or _parse_date(request.args.get("date") or request.form.get("business_date"))
     selected_code = _clean_period_code(selected_code or request.args.get("period_code") or request.form.get("period_code"))
     period = db.session.scalar(select(BusinessPeriod).where(
@@ -219,15 +222,22 @@ def _closing_context(*, form=None, action=None, selected_date=None, selected_cod
         form.expenses_amount.data = "0"
         form.handed_to_cash_amount.data = ""
     closed_rows, handover = ([], None)
+    closed_material_rows = []
     base_rows = []
+    base_material_rows = []
     if period and period.status == "closed":
         closed_rows, handover = get_closed_period_summary(period)
+        closed_material_rows = get_closed_raw_material_summary(period)
     elif period and period.status == "open":
         try:
             base_rows = preview_period_close(period)
-        except ClosingRuleError:
+            base_material_rows = preview_raw_material_balances(period)
+        except ClosingRuleError as exc:
+            flash(str(exc), "error")
             base_rows = []
+            base_material_rows = []
     quantity_inputs = quantity_inputs or {}
+    raw_material_inputs = raw_material_inputs or {}
     return render_template(
         "operations/closing.html",
         period=period,
@@ -238,9 +248,12 @@ def _closing_context(*, form=None, action=None, selected_date=None, selected_cod
         selected_period_label=period_label(selected_code),
         period_choices=_period_choices(),
         closed_rows=closed_rows,
+        closed_material_rows=closed_material_rows,
         handover=handover,
         base_rows=base_rows,
+        base_material_rows=base_material_rows,
         quantity_inputs=quantity_inputs,
+        raw_material_inputs=raw_material_inputs,
         calculation=calculation,
         show_details=action in {"details", "calculate"} or (period is not None and period.status == "open" and request.method == "POST"),
         show_calculation=action == "calculate" and calculation is not None,
@@ -261,6 +274,7 @@ def closing():
     ]
     action = request.form.get("action") if request.method == "POST" else request.args.get("action")
     quantity_inputs = {}
+    raw_material_inputs = {}
     calculation = None
     if request.method == "POST":
         form.process(request.form)
@@ -291,6 +305,11 @@ def closing():
         }
         damaged = {product_id: values["damaged"] for product_id, values in quantity_inputs.items()}
         carried = {product_id: values["carried"] for product_id, values in quantity_inputs.items()}
+        material_preview = preview_raw_material_balances(period)
+        raw_material_inputs = {
+            row["item_id"]: request.form.get(f"raw_ending_{row['item_id']}", "")
+            for row in material_preview
+        }
         if action == "close":
             try:
                 handover, rows, expected = close_period_with_handover(
@@ -301,6 +320,7 @@ def closing():
                     handed_to_cash_amount=form.handed_to_cash_amount.data,
                     damaged_quantities=damaged,
                     carried_quantities=carried,
+                    raw_material_endings=raw_material_inputs,
                     statement=form.statement.data,
                     actor_id=current_user.id,
                 )
@@ -314,9 +334,11 @@ def closing():
         elif action == "calculate":
             try:
                 rows, expected = calculate_close_rows(period, damaged, carried)
+                material_rows = calculate_raw_material_close_rows(period, raw_material_inputs)
                 received = Decimal(str(form.received_amount.data or 0))
                 calculation = {
                     "rows": rows,
+                    "material_rows": material_rows,
                     "expected": expected,
                     "received": received,
                     "difference": expected - received,
@@ -332,5 +354,6 @@ def closing():
         selected_date=selected_date,
         selected_code=selected_code,
         quantity_inputs=quantity_inputs,
+        raw_material_inputs=raw_material_inputs,
         calculation=calculation,
     )
