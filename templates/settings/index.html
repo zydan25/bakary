@@ -19,4 +19,26 @@
  </div>
  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الإعدادات...">حفظ الإعدادات</button></div>
 </form>
+
+
+<section class="content-card dashboard-action-settings">
+ <div class="section-title">
+  <div><h2>أزرار الإجراءات السريعة</h2><p>تحكم في ظهور الاختصارات في الصفحة الرئيسية. إخفاء الزر هنا لا يمنح صلاحية جديدة ولا يغيّر صلاحيات المستخدمين.</p></div>
+ </div>
+ <form method="post" class="form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save_quick_actions">
+  <div class="dashboard-action-settings-grid">
+   {% for key, label, description in quick_action_options %}
+   <label class="dashboard-action-setting">
+    <input type="checkbox" name="quick_actions" value="{{ key }}" {% if key in quick_actions_enabled %}checked{% endif %}>
+    <span class="dashboard-action-setting-copy"><strong>{{ label }}</strong><small>{{ description }}</small></span>
+    <span class="dashboard-action-switch" aria-hidden="true"></span>
+   </label>
+   {% endfor %}
+  </div>
+  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الاختصارات...">حفظ أزرار الصفحة الرئيسية</button></div>
+ </form>
+</section>
+
 {% endblock %}
