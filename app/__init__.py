@@ -2,7 +2,8 @@
 
 import os
 
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template, request, url_for
+from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 
 from app.config import config_by_name
@@ -19,11 +20,10 @@ def create_app(config_name=None, test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    if name == "production" and (
-        not os.getenv("SECRET_KEY")
-        or os.getenv("SECRET_KEY") == "development-only-change-me"
-    ):
+    if name == "production" and not os.getenv("SECRET_KEY"):
         raise RuntimeError("SECRET_KEY must be configured for production.")
+    if name == "production" and os.getenv("SECRET_KEY") == "development-only-change-me":
+        raise RuntimeError("The development SECRET_KEY cannot be used in production.")
 
     os.makedirs(app.instance_path, exist_ok=True)
 
@@ -31,24 +31,65 @@ def create_app(config_name=None, test_config=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "سجّل الدخول لمتابعة هذه الصفحة."
+    login_manager.login_message_category = "info"
 
     # Import all models before migrations inspect SQLAlchemy metadata.
     from app import models  # noqa: F401
+    from app.models.user import User
+    from app.auth import auth_bp
+    from app.dashboard import dashboard_bp
     from app.health import health_bp
+    from app.cli import register_cli
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        try:
+            return db.session.get(User, int(user_id))
+        except (TypeError, ValueError):
+            return None
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
+    register_cli(app)
+
+    @app.before_request
+    def require_first_password_change():
+        if not current_user.is_authenticated or not current_user.must_change_password:
+            return None
+        allowed_endpoints = {
+            "auth.account",
+            "auth.logout",
+            "static",
+            "health.health",
+        }
+        if request.endpoint not in allowed_endpoints:
+            return redirect(url_for("auth.account"))
+        return None
 
     @app.get("/")
     def home():
+        if current_user.is_authenticated:
+            return redirect(url_for("dashboard.index"))
         return render_template("landing.html")
 
     @app.errorhandler(CSRFError)
-    def handle_csrf_error(error):
+    def handle_csrf_error(_error):
         return render_template(
             "error.html",
             title="تعذر التحقق من الطلب",
             message="انتهت صلاحية النموذج أو تعذر التحقق منه. أعد تحميل الصفحة وحاول مجددًا.",
         ), 400
+
+    @app.errorhandler(403)
+    def forbidden(_error):
+        return render_template(
+            "error.html",
+            title="ليست لديك صلاحية",
+            message="حسابك لا يملك الإذن لتنفيذ هذا الإجراء.",
+        ), 403
 
     @app.errorhandler(404)
     def not_found(_error):
