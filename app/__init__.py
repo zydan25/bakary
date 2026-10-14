@@ -51,6 +51,7 @@ def create_app(config_name=None, test_config=None):
     from app.health import health_bp
     from app.products import products_bp
     from app.parties import parties_bp
+    from app.distribution import distribution_bp
     from app.cli import register_cli
 
     @login_manager.user_loader
@@ -65,6 +66,7 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(parties_bp)
+    app.register_blueprint(distribution_bp)
     register_cli(app)
 
     @app.before_request
