@@ -1365,3 +1365,58 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .finance-account-actions .quiet-button { width: 100%; padding-inline: 7px; font-size: 12px; white-space: normal; }
 }
 
+/* Ledger cards: clear status, amount and safe edit/delete controls on desktop and mobile */
+.record-filter-toolbar { margin-bottom: 13px; }
+.record-filter-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr) minmax(180px, 1.2fr); gap: 10px; align-items: end; }
+.distribution-record-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.distribution-record-card { min-width: 0; margin-bottom: 0; padding: 15px; }
+.distribution-record-top { display: flex; align-items: flex-start; gap: 10px; }
+.distribution-record-icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border: 1px solid #d9e5fb; border-radius: 13px; background: #eff5ff; color: #194fc0; font-size: 23px; font-weight: 900; }
+.payment-record-icon { border-color: #cdeee3; background: #effbf6; color: #087858; font-size: 13px; }
+.distribution-record-heading { min-width: 0; flex: 1; }
+.distribution-record-heading h2 { margin: 0 0 4px; color: #202b3c; font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.distribution-record-heading p { margin: 0; color: #6b7688; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.distribution-record-amount { flex: 0 0 auto; color: #1748ae; font-size: 17px; font-weight: 900; text-align: left; white-space: nowrap; }
+.distribution-record-amount small { display: inline; color: #7a8494; font-size: 10px; font-weight: 700; }
+.payment-record-amount { color: #087858; }
+.distribution-record-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+.distribution-record-meta span { display: inline-flex; max-width: 100%; align-items: center; padding: 5px 8px; border: 1px solid #e6ebf3; border-radius: 8px; background: #f8faff; color: #657187; font-size: 10.5px; line-height: 1.4; }
+.distribution-record-note { margin: 10px 0 0; padding: 9px 10px; border-inline-start: 3px solid #d6e2f7; border-radius: 6px; background: #fafcff; color: #5e6b80; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.distribution-record-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #edf0f5; }
+.distribution-record-actions form { display: contents; }
+.distribution-record-actions a, .distribution-record-actions button { min-height: 39px; padding: 8px 12px; font-size: 12px; }
+.locked-period-note { display: flex; align-items: center; color: #8b6570; font-size: 11px; line-height: 1.5; }
+.distribution-edit-card { width: min(100%, 680px); margin-inline: auto; }
+.distribution-edit-card .inline-note { margin-top: 2px; }
+.distribution-edit-card .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.distribution-edit-card .dialog-actions .button-wide { flex: 1 1 210px; }
+
+/* Stronger tree-menu hierarchy and readable child links */
+.tree-section { box-shadow: 0 2px 7px rgba(23, 39, 65, .025); }
+.tree-heading { min-height: 52px; transition: background .15s ease, color .15s ease; }
+.tree-heading:focus-visible { outline: 2px solid #7ba4f5; outline-offset: -3px; }
+.tree-children { padding: 7px 8px 8px; border-top: 1px solid #dce4f1; background: #f5f8fe; }
+.tree-children .tree-link { min-height: 43px; margin: 3px 0; padding: 8px 11px; border: 1px solid #e7edf6; border-inline-start: 3px solid #d2ddee; border-radius: 9px; background: #fff; color: #354158; font-size: 13px; font-weight: 650; transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease; }
+.tree-children .tree-link:hover { border-color: #d0dcf2; border-inline-start-color: #6c93e9; background: #f0f5ff; color: #1648a9; transform: translateX(-1px); }
+.tree-children .tree-link.is-active { border-color: #c4d6fc; border-inline-start: 4px solid var(--primary); background: #e8f0ff; color: #123f9a; font-weight: 850; box-shadow: inset 0 0 0 1px rgba(26,86,219,.025); }
+.tree-children .child-symbol { flex-basis: 25px; width: 25px; height: 25px; border: 1px solid #e2e8f2; border-radius: 7px; background: #f7f9fd; color: #526681; font-size: 15px; }
+.tree-section.is-open .tree-heading-title { font-weight: 900; }
+@media (max-width: 760px) {
+  .record-filter-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .distribution-record-list { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .distribution-record-card { padding: 13px; border-radius: 15px; }
+  .distribution-record-amount { font-size: 15px; }
+  .distribution-record-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .distribution-record-actions > * { min-width: 0; }
+  .distribution-record-actions a, .distribution-record-actions button { width: 100%; padding-inline: 7px; font-size: 11.5px; white-space: normal; }
+  .locked-period-note { grid-column: 1 / -1; }
+}
+@media (max-width: 370px) {
+  .distribution-record-top { gap: 7px; }
+  .distribution-record-icon { width: 35px; height: 35px; flex-basis: 35px; border-radius: 10px; font-size: 19px; }
+  .distribution-record-heading h2 { font-size: 13px; }
+  .distribution-record-heading p { font-size: 11px; }
+  .distribution-record-amount { font-size: 13px; }
+  .distribution-record-actions { grid-template-columns: minmax(0, 1fr); }
+}
+
