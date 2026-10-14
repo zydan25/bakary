@@ -79,10 +79,12 @@
             {% if current_user.has_permission('distribution.issue') %}
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='distributor') }}"><span class="child-symbol">↗</span><span>صرف موزع</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='customer') }}"><span class="child-symbol">↗</span><span>صرف عميل</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='all') }}"><span class="child-symbol">↗</span><span>صرف عام</span></a>
             {% endif %}
             {% if current_user.has_permission('distribution.payment') %}
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='distributor') }}"><span class="child-symbol">ر.ي</span><span>دفع موزع</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='customer') }}"><span class="child-symbol">ر.ي</span><span>دفع عميل</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='all') }}"><span class="child-symbol">ر.ي</span><span>دفع عام</span></a>
             {% endif %}
             {% if current_user.has_permission('distribution.reports') %}
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_report', party_type='distributor') }}"><span class="child-symbol">▤</span><span>تقرير صرف الموزعين</span></a>
@@ -121,18 +123,11 @@
             <a class="tree-link" data-nav-link href="{{ url_for('production.index') }}"><span class="child-symbol">♨</span><span>سجل الإنتاج</span></a>
             {% if current_user.has_permission('production.manage') %}
             <a class="tree-link" data-nav-link href="{{ url_for('production.index', action='batch') }}"><span class="child-symbol">＋</span><span>تسجيل عجنة</span></a>
-            <a class="tree-link" data-nav-link href="{{ url_for('production.index', action='flour') }}"><span class="child-symbol">▤</span><span>إجمالي الدقيق للفترة</span></a>
             {% endif %}
           </div>
         </section>
         {% endif %}
 
-        {% if current_user.has_permission('free_distribution.manage') %}
-        <section class="tree-section" data-nav-section="free-distribution">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♡</span><span class="tree-heading-title">التوزيع المجاني</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
-          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.free_distribution') }}"><span class="child-symbol">♡</span><span>المستفيدون والصرف المجاني</span></a></div>
-        </section>
-        {% endif %}
         {% if current_user.has_permission('handover.manage') %}
         <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="nav-symbol">✓</span><span>إقفال الفترة والتسليم</span></a>
         {% endif %}
