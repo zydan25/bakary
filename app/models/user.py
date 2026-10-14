@@ -32,6 +32,10 @@ class User(UserMixin, TimestampMixin, db.Model):
         return bool(self.password_hash) and check_password_hash(self.password_hash, password or "")
 
     def has_permission(self, permission_code):
+        if not self.is_active:
+            return False
+        if any(role.code == "owner" for role in self.roles):
+            return True
         return any(
             permission.code == permission_code
             for role in self.roles
