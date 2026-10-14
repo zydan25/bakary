@@ -22,23 +22,103 @@
 
 
 <section class="content-card dashboard-action-settings">
- <div class="section-title">
-  <div><h2>أزرار الإجراءات السريعة</h2><p>تحكم في ظهور الاختصارات في الصفحة الرئيسية. إخفاء الزر هنا لا يمنح صلاحية جديدة ولا يغيّر صلاحيات المستخدمين.</p></div>
- </div>
- <form method="post" class="form-stack">
+ <div class="section-title"><div><h2>تخصيص أزرار الرئيسية</h2><p>غيّر اسم أي زر ومساره، واسحب الترتيب باستخدام الأسهم، أو أضف اختصارات جديدة إلى أي صفحة داخل النظام.</p></div></div>
+ <form method="post" class="form-stack" id="dashboard-shortcuts-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="save_quick_actions">
-  <div class="dashboard-action-settings-grid">
-   {% for key, label, description in quick_action_options %}
-   <label class="dashboard-action-setting">
-    <input type="checkbox" name="quick_actions" value="{{ key }}" {% if key in quick_actions_enabled %}checked{% endif %}>
-    <span class="dashboard-action-setting-copy"><strong>{{ label }}</strong><small>{{ description }}</small></span>
-    <span class="dashboard-action-switch" aria-hidden="true"></span>
-   </label>
+  <div class="dashboard-action-settings-grid" id="dashboard-action-rows">
+   {% for action in quick_actions %}
+   <article class="dashboard-action-row" data-shortcut-row>
+    <div class="dashboard-action-row-top">
+     <label class="dashboard-action-enable"><input type="checkbox" name="action_enabled_{{ loop.index0 }}" value="1" {% if action.enabled %}checked{% endif %}><span>إظهار</span></label>
+     <div class="dashboard-action-order">
+      <button type="button" class="quiet-icon-button" data-move-up aria-label="تحريك لأعلى" title="تحريك لأعلى">↑</button>
+      <button type="button" class="quiet-icon-button" data-move-down aria-label="تحريك لأسفل" title="تحريك لأسفل">↓</button>
+      <button type="button" class="quiet-icon-button danger-icon-button" data-remove-row aria-label="حذف الاختصار" title="حذف الاختصار">×</button>
+     </div>
+    </div>
+    <div class="form-row">
+     <div class="form-field"><label class="field-label" for="action-label-{{ loop.index0 }}">اسم الزر</label><input class="form-control" id="action-label-{{ loop.index0 }}" name="action_label_{{ loop.index0 }}" value="{{ action.label }}" maxlength="50" placeholder="مثال: دفع موزع" required></div>
+     <div class="form-field"><label class="field-label" for="action-url-{{ loop.index0 }}">الرابط الداخلي</label><input class="form-control" id="action-url-{{ loop.index0 }}" name="action_url_{{ loop.index0 }}" value="{{ action.url }}" dir="ltr" placeholder="/distribution/payment/distributor" required></div>
+    </div>
+   </article>
    {% endfor %}
   </div>
-  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الاختصارات...">حفظ أزرار الصفحة الرئيسية</button></div>
+  <div class="dashboard-action-row-tools"><button type="button" class="secondary-button" id="add-dashboard-shortcut">＋ إضافة زر جديد</button><small>يُسمح حتى 20 زرًا، ويجب أن يبدأ الرابط بـ / ويكون داخل النظام.</small></div>
+  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الأزرار...">حفظ ترتيب وأسماء وروابط الأزرار</button></div>
  </form>
 </section>
 
+<section class="content-card dashboard-action-settings">
+ <div class="section-title"><div><h2>الشريط السفلي للهاتف</h2><p>أظهر أو أخفِ شريط التنقل الثابت أسفل الشاشة على الهواتف.</p></div></div>
+ <form method="post" class="bottom-nav-setting-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save_bottom_nav">
+  <label class="dashboard-action-setting bottom-nav-setting">
+   <input type="checkbox" name="show_bottom_nav" value="1" {% if show_bottom_nav %}checked{% endif %}>
+   <span class="dashboard-action-setting-copy"><strong>إظهار الشريط السفلي</strong><small>عند تعطيله، يبقى الوصول إلى الصفحات متاحًا من القائمة الجانبية.</small></span>
+   <span class="dashboard-action-switch" aria-hidden="true"></span>
+  </label>
+  <div class="dialog-actions"><button type="submit" class="primary-button">حفظ إعداد الشريط</button></div>
+ </form>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+ const container = document.getElementById("dashboard-action-rows");
+ const addButton = document.getElementById("add-dashboard-shortcut");
+ if (!container || !addButton) return;
+ const maxRows = 20;
+ const renumber = () => {
+   [...container.querySelectorAll("[data-shortcut-row]")].forEach((row, index) => {
+     row.querySelectorAll("input").forEach(input => {
+       const suffix = input.type === "checkbox" ? "enabled" : input.name.includes("label") ? "label" : "url";
+       input.name = "action_" + suffix + "_" + index;
+       if (input.id) input.id = "action-" + suffix + "-" + index;
+     });
+     row.querySelectorAll("label[for]").forEach(label => {
+       const target = row.querySelector("input[id]");
+       if (target) label.htmlFor = target.id;
+     });
+     const up = row.querySelector("[data-move-up]");
+     const down = row.querySelector("[data-move-down]");
+     up.disabled = index === 0;
+     down.disabled = index === container.children.length - 1;
+   });
+   addButton.disabled = container.querySelectorAll("[data-shortcut-row]").length >= maxRows;
+ };
+ const makeRow = () => {
+   const row = document.createElement("article");
+   row.className = "dashboard-action-row";
+   row.setAttribute("data-shortcut-row", "");
+   row.innerHTML = `
+    <div class="dashboard-action-row-top">
+      <label class="dashboard-action-enable"><input type="checkbox" value="1"><span>إظهار</span></label>
+      <div class="dashboard-action-order"><button type="button" class="quiet-icon-button" data-move-up aria-label="تحريك لأعلى">↑</button><button type="button" class="quiet-icon-button" data-move-down aria-label="تحريك لأسفل">↓</button><button type="button" class="quiet-icon-button danger-icon-button" data-remove-row aria-label="حذف الاختصار">×</button></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label class="field-label">اسم الزر</label><input class="form-control" maxlength="50" placeholder="مثال: صرف عميل" required></div>
+      <div class="form-field"><label class="field-label">الرابط الداخلي</label><input class="form-control" dir="ltr" placeholder="/distribution/issue/customer" required></div>
+    </div>`;
+   return row;
+ };
+ container.addEventListener("click", event => {
+   const row = event.target.closest("[data-shortcut-row]");
+   if (!row) return;
+   if (event.target.closest("[data-remove-row]")) row.remove();
+   else if (event.target.closest("[data-move-up]") && row.previousElementSibling) container.insertBefore(row, row.previousElementSibling);
+   else if (event.target.closest("[data-move-down]") && row.nextElementSibling) container.insertBefore(row.nextElementSibling, row);
+   renumber();
+ });
+ addButton.addEventListener("click", () => {
+   if (container.querySelectorAll("[data-shortcut-row]").length >= maxRows) return;
+   container.appendChild(makeRow());
+   renumber();
+   container.lastElementChild.querySelector('input:not([type="checkbox"])').focus();
+ });
+ renumber();
+})();
+</script>
 {% endblock %}
