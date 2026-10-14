@@ -21,7 +21,7 @@ from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
 from app.reports import reports_bp
 from app.services.finance import cash_account_balance
-from app.services.inventory import inventory_balance
+from app.services.inventory import inventory_balance, inventory_valuation
 
 
 def _amount(value):
