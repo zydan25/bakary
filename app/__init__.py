@@ -135,7 +135,7 @@ def create_app(config_name=None, test_config=None):
             "description": "إدارة الموزعين والعملاء والإنتاج والمخزون والحسابات",
             "lang": "ar",
             "dir": "rtl",
-            "start_url": "/",
+            "start_url": url_for("dashboard.index"),
             "scope": "/",
             "display": "standalone",
             "orientation": "portrait-primary",
