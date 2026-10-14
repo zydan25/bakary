@@ -36,7 +36,8 @@
   {{ account_form.hidden_tag() }}
   <div class="form-field">{{ account_form.name.label(class_="field-label") }}{{ account_form.name(class_="form-control",placeholder="مثال: حساب البيت") }}{% for error in account_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
   <div class="form-row"><div class="form-field">{{ account_form.code.label(class_="field-label") }}{{ account_form.code(class_="form-control",placeholder="HOME",dir="ltr") }}{% for error in account_form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div><div class="form-field">{{ account_form.account_type.label(class_="field-label") }}{{ account_form.account_type(class_="form-control",**{'data-searchable':'true'}) }}</div></div>
-  <div class="inline-note">الحساب الجديد يبدأ بصفر؛ سجّل له حركات قبض أو تحويلات حتى يتكون رصيده.</div>
+  <div class="form-field">{{ account_form.opening_balance.label(class_="field-label") }}{{ account_form.opening_balance(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in account_form.opening_balance.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="inline-note">الرصيد الافتتاحي يسجل كحركة مستقلة قابلة للتتبع. اتركه صفرًا إذا لم يكن هناك رصيد حالي.</div>
   <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ الحساب</button><a class="secondary-button" href="{{ url_for('finance.index') }}">إلغاء</a></div>
  </form>
 </dialog>
