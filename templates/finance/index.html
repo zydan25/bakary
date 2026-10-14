@@ -1,0 +1,43 @@
+{% extends "layouts/base.html" %}
+{% block title %}الصندوق والحسابات{% endblock %}
+{% block page_heading %}الصندوق والحسابات{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">المالية</p><h1>الصندوق والحسابات</h1><p class="heading-subtitle">الأرصدة مستنتجة من سجل الحركات النقدية؛ التحويلات لا تعتبر دخلًا ولا مصروفًا.</p></div>
+ <div class="heading-actions">
+  {% if can_manage_accounts %}<a class="primary-button" href="{{ url_for('finance.index',action='new') }}">＋ حساب جديد</a>{% endif %}
+  {% if can_manage_expenses %}<a class="secondary-button" href="{{ url_for('finance.expenses',action='new') }}">تسجيل مصروف</a>{% endif %}
+  {% if can_manage_transfers %}<a class="secondary-button" href="{{ url_for('finance.transfers',action='new') }}">تحويل بين الحسابات</a>{% endif %}
+ </div>
+</section>
+<section class="section-title"><div><h2>الحسابات النقدية</h2><p>الرصيد الحالي والحالة</p></div></section>
+<section class="entity-list">
+ {% for row in balance_rows %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">{{ '▣' if row.account.account_type == 'bank' else 'ر.ي' }}</div><div class="entity-main"><h2>{{ row.account.name }}</h2><p>{{ row.account.code }} · {% if row.account.account_type == 'bank' %}حساب بنكي{% elif row.account.account_type == 'cash' %}نقدي{% else %}حساب آخر{% endif %}</p></div>
+  {% if row.account.is_main %}<span class="status-badge status-primary">الصندوق الرئيسي</span>{% elif not row.account.is_active %}<span class="status-badge status-muted">موقوف</span>{% endif %}</div>
+  <div class="stock-balance-panel"><small>الرصيد الحالي</small><strong class="{% if row.balance < 0 %}summary-red{% else %}stock-value{% endif %}">{{ "{:,.2f}".format(row.balance) }} <small>ريال</small></strong></div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا توجد حسابات نقدية</h2><p>تأكد من إعداد الصندوق الرئيسي أولًا.</p></div>{% endfor %}
+</section>
+<section class="section-title section-title-spaced"><div><h2>آخر الحركات النقدية</h2><p>أحدث 20 حركة مسجلة في الحسابات.</p></div></section>
+<section class="entity-list">
+ {% for row in movement_rows %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">{{ '＋' if row.movement.direction == 'in' else '−' }}</div><div class="entity-main"><h2>{{ row.movement.statement or row.movement.movement_type }}</h2><p>{{ row.account_name }} · {{ row.movement.business_date.isoformat() }}</p></div><span class="status-badge {% if row.movement.direction == 'in' %}status-primary{% else %}status-muted{% endif %}">{{ 'وارد' if row.movement.direction == 'in' else 'صادر' }}</span></div>
+  <div class="stock-balance-panel"><small>قيمة الحركة</small><strong class="{% if row.movement.direction == 'in' %}summary-green{% else %}summary-red{% endif %}">{{ "{:,.2f}".format(row.movement.amount) }} ريال</strong></div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا توجد حركات نقدية بعد</h2><p>تظهر هنا حركات القبض والمصروفات والتحويلات والتسليمات.</p></div>{% endfor %}
+</section>
+
+<dialog class="form-dialog" id="cash-account-dialog" data-auto-open="{{ 'true' if show_account_form else 'false' }}">
+ <div class="dialog-header"><div><p class="eyebrow">إدارة الحسابات</p><h2>إضافة حساب نقدي</h2></div><a class="dialog-close" href="{{ url_for('finance.index') }}" aria-label="إغلاق">×</a></div>
+ <form method="post" action="{{ url_for('finance.add_account') }}" class="form-stack">
+  {{ account_form.hidden_tag() }}
+  <div class="form-field">{{ account_form.name.label(class_="field-label") }}{{ account_form.name(class_="form-control",placeholder="مثال: حساب البيت") }}{% for error in account_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-row"><div class="form-field">{{ account_form.code.label(class_="field-label") }}{{ account_form.code(class_="form-control",placeholder="HOME",dir="ltr") }}{% for error in account_form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div><div class="form-field">{{ account_form.account_type.label(class_="field-label") }}{{ account_form.account_type(class_="form-control",**{'data-searchable':'true'}) }}</div></div>
+  <div class="inline-note">الحساب الجديد يبدأ بصفر؛ سجّل له حركات قبض أو تحويلات حتى يتكون رصيده.</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ الحساب</button><a class="secondary-button" href="{{ url_for('finance.index') }}">إلغاء</a></div>
+ </form>
+</dialog>
+{% endblock %}
