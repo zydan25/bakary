@@ -1,6 +1,7 @@
 """Validated financial entry forms."""
 
 from datetime import date
+from app.services.clock import business_today
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
@@ -46,7 +47,7 @@ class ExpenseForm(FlaskForm):
         ],
     )
     cash_account_id = SelectField("الحساب الذي صُرف منه", coerce=int, validators=[DataRequired(message="اختر الحساب.")])
-    business_date = DateField("التاريخ", format="%Y-%m-%d", default=date.today, validators=[DataRequired()])
+    business_date = DateField("التاريخ", format="%Y-%m-%d", default=business_today, validators=[DataRequired()])
     statement = TextAreaField("البيان", validators=[Optional(), Length(max=2000)])
 
 
@@ -62,5 +63,5 @@ class TransferForm(FlaskForm):
             NumberRange(min=Decimal("0.01"), message="المبلغ يجب أن يكون أكبر من صفر."),
         ],
     )
-    business_date = DateField("التاريخ", format="%Y-%m-%d", default=date.today, validators=[DataRequired()])
+    business_date = DateField("التاريخ", format="%Y-%m-%d", default=business_today, validators=[DataRequired()])
     statement = TextAreaField("البيان", validators=[Optional(), Length(max=2000)])
