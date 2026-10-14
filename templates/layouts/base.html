@@ -77,11 +77,13 @@
           </button>
           <div class="tree-children" hidden>
             {% if current_user.has_permission('distribution.issue') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_records') }}"><span class="child-symbol">▤</span><span>سجل الصرف</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='distributor') }}"><span class="child-symbol">↗</span><span>صرف موزع</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='customer') }}"><span class="child-symbol">↗</span><span>صرف عميل</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='all') }}"><span class="child-symbol">↗</span><span>صرف عام</span></a>
             {% endif %}
             {% if current_user.has_permission('distribution.payment') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment_records') }}"><span class="child-symbol">▤</span><span>سجل الدفعات</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='distributor') }}"><span class="child-symbol">ر.ي</span><span>دفع موزع</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='customer') }}"><span class="child-symbol">ر.ي</span><span>دفع عميل</span></a>
             <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='all') }}"><span class="child-symbol">ر.ي</span><span>دفع عام</span></a>
@@ -128,14 +130,24 @@
         </section>
         {% endif %}
 
-        {% if current_user.has_permission('handover.manage') %}
-        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="nav-symbol">✓</span><span>إقفال الفترة والتسليم</span></a>
-        {% endif %}
-        {% if current_user.has_permission('handover.manage') or current_user.has_permission('free_distribution.manage') or current_user.has_permission('distribution.reports') or current_user.has_permission('reports.view') or current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
-        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('operations.periods_report') }}"><span class="nav-symbol">▦</span><span>تقرير الأيام والفترات</span></a>
-        {% endif %}
-        {% if current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('distribution.reports') %}
-        <a class="tree-link tree-root-link" data-nav-link href="{{ url_for('reports.index') }}"><span class="nav-symbol">▤</span><span>التقارير</span></a>
+        {% if current_user.has_permission('handover.manage') or current_user.has_permission('free_distribution.manage') or current_user.has_permission('distribution.reports') or current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
+        <section class="tree-section" data-nav-section="periods">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">▦</span><span class="tree-heading-title">الفترات</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            {% if current_user.has_permission('handover.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="child-symbol">✓</span><span>إقفال الفترة والتسليم</span></a>
+            {% endif %}
+            {% if current_user.has_permission('handover.manage') or current_user.has_permission('free_distribution.manage') or current_user.has_permission('distribution.reports') or current_user.has_permission('reports.view') or current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('operations.periods_report') }}"><span class="child-symbol">▦</span><span>تقرير الأيام والفترات</span></a>
+            {% endif %}
+            {% if current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('distribution.reports') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('reports.index') }}"><span class="child-symbol">▤</span><span>التقارير</span></a>
+            {% endif %}
+          </div>
+        </section>
         {% endif %}
         {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') or current_user.has_permission('cash.accounts.manage') %}
         <section class="tree-section" data-nav-section="finance">
