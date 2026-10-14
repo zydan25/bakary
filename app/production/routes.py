@@ -86,8 +86,6 @@ def _page_context(
             (product.id for product in product_rows if product.is_default),
             product_rows[0].id if product_rows else 0,
         )
-        batch_form.flour_item_id.data = 0
-        batch_form.flour_mode.data = "none"
         batch_form.business_date.data = selected_date
         batch_form.period_code.data = selected_code
         batch_form.idempotency_key.data = uuid4().hex
@@ -111,9 +109,6 @@ def _page_context(
         (item.id, item.name) for item in inventory_rows
     ]
     batch_form.product_id.choices = product_choices
-    batch_form.flour_item_id.choices = [(0, "لا توجد مادة محددة")] + [
-        (item.id, item.name) for item in inventory_rows
-    ]
     batch_form.period_code.choices = periods
     flour_form.item_id.choices = flour_choices
     flour_form.period_code.choices = periods
@@ -212,15 +207,12 @@ def create_batch():
                 produced_quantity=form.produced_quantity.data,
                 business_date=form.business_date.data,
                 period_code=form.period_code.data,
-                flour_mode=form.flour_mode.data,
-                flour_item_id=form.flour_item_id.data,
-                flour_quantity=form.flour_quantity.data,
                 statement=form.statement.data,
                 actor_id=current_user.id,
                 idempotency_key=form.idempotency_key.data,
             )
             flash(
-                "تم تسجيل العجنة واستهلاك الدقيق بنجاح."
+                "تم تسجيل العجنة بنجاح؛ سيُحتسب استهلاك المواد الخام عند إقفال الفترة."
                 if created else "هذه العجنة مسجلة بالفعل؛ لم تُكرر.",
                 "success" if created else "info",
             )
