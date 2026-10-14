@@ -257,3 +257,64 @@ def test_period_close_records_raw_material_opening_and_calculated_consumption():
             assert material_consumption.quantity == Decimal("20.000")
     finally:
         cleanup(app)
+
+
+def test_free_recipient_profile_edit_delete_and_period_reports_render():
+    app, (actor_id, product_id, _employee_id) = setup()
+    try:
+        client = app.test_client()
+        login = client.post("/auth/login", data={
+            "phone": "+967771234567", "password": "Strong-pass-123"
+        }, follow_redirects=True)
+        assert login.status_code == 200
+
+        with app.app_context():
+            recipient = FreeRecipient(
+                name="مستفيد ملف",
+                notes="ملاحظة أولى",
+                default_product_id=product_id,
+                daily_quantity=Decimal("6.000"),
+                is_active=True,
+                created_by_id=actor_id,
+            )
+            db.session.add(recipient)
+            db.session.commit()
+            recipient_id = recipient.id
+
+        profile = client.get(f"/operations/free-recipients/{recipient_id}")
+        assert profile.status_code == 200
+        assert "مستفيد ملف" in profile.get_data(as_text=True)
+
+        edited = client.post(f"/operations/free-recipients/{recipient_id}/edit", data={
+            "name": "مستفيد محدث",
+            "product_id": str(product_id),
+            "quantity": "8.000",
+            "notes": "ملاحظة محدثة",
+        }, follow_redirects=True)
+        assert edited.status_code == 200
+        assert "مستفيد محدث" in edited.get_data(as_text=True)
+        with app.app_context():
+            saved = db.session.get(FreeRecipient, recipient_id)
+            assert saved.name == "مستفيد محدث"
+            assert saved.daily_quantity == Decimal("8.000")
+
+        periods = client.get("/operations/periods/")
+        assert periods.status_code == 200
+        assert "تقرير الأيام والفترات" in periods.get_data(as_text=True)
+
+        with app.app_context():
+            period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.business_date == date.today(), BusinessPeriod.period_code == "daily"
+            ))
+            period_id = period.id if period else None
+        if period_id:
+            period_page = client.get(f"/operations/periods/{period_id}")
+            assert period_page.status_code == 200
+            assert "افتتاح الفترة" in period_page.get_data(as_text=True)
+
+        deleted = client.post(f"/operations/free-recipients/{recipient_id}/delete", data={}, follow_redirects=True)
+        assert deleted.status_code == 200
+        with app.app_context():
+            assert db.session.get(FreeRecipient, recipient_id) is None
+    finally:
+        cleanup(app)
