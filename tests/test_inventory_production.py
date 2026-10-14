@@ -48,7 +48,7 @@ def cleanup(app):
         db.drop_all()
 
 
-def test_opening_stock_dough_batch_and_duplicate_request_are_safe():
+def test_opening_stock_dough_batch_records_production_without_immediate_consumption():
     app, user_id, product_id, item_id = setup()
     try:
         with app.app_context():
@@ -57,9 +57,6 @@ def test_opening_stock_dough_batch_and_duplicate_request_are_safe():
                 produced_quantity="250",
                 business_date=date.today(),
                 period_code="daily",
-                flour_mode="per_batch",
-                flour_item_id=item_id,
-                flour_quantity="4.500",
                 statement="عجنة اختبار",
                 actor_id=user_id,
                 idempotency_key="test-dough-request-001",
@@ -79,7 +76,7 @@ def test_opening_stock_dough_batch_and_duplicate_request_are_safe():
             )
             assert repeated.id == batch.id
             assert created_again is False
-            assert inventory_balance(item_id) == Decimal("95.500")
+            assert inventory_balance(item_id) == Decimal("100.000")
             assert db.session.scalar(select(func.count()).select_from(DoughBatch)) == 1
             movement = db.session.scalar(
                 select(InventoryMovement).where(
@@ -87,14 +84,12 @@ def test_opening_stock_dough_batch_and_duplicate_request_are_safe():
                     InventoryMovement.source_id == batch.id,
                 )
             )
-            assert movement is not None
-            assert movement.direction == "out"
-            assert movement.quantity == Decimal("4.500")
+            assert movement is None
     finally:
         cleanup(app)
 
 
-def test_period_total_flour_is_deducted_once_and_cannot_be_mixed():
+def test_legacy_period_total_flour_is_idempotent_and_batch_entry_does_not_consume():
     app, user_id, product_id, item_id = setup()
     other_day = date.today() - timedelta(days=1)
     try:
@@ -115,18 +110,17 @@ def test_period_total_flour_is_deducted_once_and_cannot_be_mixed():
             assert inventory_balance(item_id) == Decimal("88.000")
             assert db.session.scalar(select(func.count()).select_from(PeriodIngredientUsage)) == 1
 
-            # The same item and period cannot use both aggregate flour and per-batch flour.
-            try:
-                create_dough_batch(
-                    product_id=product_id, produced_quantity="80",
-                    business_date=other_day, period_code="daily",
-                    flour_mode="per_batch", flour_item_id=item_id,
-                    flour_quantity="2.000", statement="لا ينبغي السماح بالخلط",
-                    actor_id=user_id, idempotency_key="mixed-flour-mode-001"
-                )
-                assert False, "Expected the mixed accounting mode to be rejected."
-            except ValueError as exc:
-                assert "إجمالي الدقيق" in str(exc)
+            # Batch entry does not consume material. Material use is calculated from
+            # the physical count at period close, not entered per batch.
+            batch, created = create_dough_batch(
+                product_id=product_id, produced_quantity="80",
+                business_date=other_day, period_code="daily",
+                statement="عجنة دون استهلاك فوري",
+                actor_id=user_id, idempotency_key="batch-no-flour-001"
+            )
+            assert created is True
+            assert batch.flour_quantity is None
+            assert inventory_balance(item_id) == Decimal("88.000")
     finally:
         cleanup(app)
 
