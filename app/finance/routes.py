@@ -10,8 +10,8 @@ from sqlalchemy import select
 from app.extensions import db
 from app.finance import finance_bp
 from app.finance.forms import CashAccountForm, ExpenseForm, TransferForm
-from app.models.expense import Expense
-from app.models.finance import CashAccount, CashMovement, CashTransfer
+from app.models.expense import CashTransfer, Expense
+from app.models.finance import CashAccount, CashMovement
 from app.services.finance import (
     FinanceRuleError,
     cash_account_balance,
