@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.role import Role
 from app.services.access_control import seed_default_roles
 from app.services.phone import normalize_phone
+from app.services.seed_defaults import seed_default_data
 
 
 def register_cli(app):
@@ -16,6 +17,15 @@ def register_cli(app):
         """Create or update baseline roles and permissions idempotently."""
         seed_default_roles()
         click.echo("تم إعداد الأدوار والصلاحيات الأساسية.")
+
+    @app.cli.command("seed-defaults")
+    def seed_defaults_command():
+        """Create initial bakery product, main cash account, and settings idempotently."""
+        result = seed_default_data()
+        click.echo(
+            "تم إعداد بيانات البداية: الصنف الافتراضي وصندوق النقد والإعدادات "
+            + "(معرف الصنف " + str(result["default_product_id"]) + ")."
+        )
 
     @app.cli.command("create-admin")
     @click.option("--name", prompt="اسم المدير", help="Full display name.")
