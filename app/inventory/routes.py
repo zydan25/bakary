@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.extensions import db
 from app.inventory import inventory_bp
@@ -80,7 +80,7 @@ def index():
     if query:
         needle = "%" + query + "%"
         statement = statement.where(
-            db.or_(InventoryItem.name.ilike(needle), InventoryItem.code.ilike(needle))
+            or_(InventoryItem.name.ilike(needle), InventoryItem.code.ilike(needle))
         )
     items = db.session.scalars(statement.order_by(InventoryItem.name.asc())).all()
     balances = {item.id: inventory_balance(item.id) for item in items}
@@ -89,6 +89,7 @@ def index():
         "inventory/index.html",
         items=items,
         balances=balances,
+        low_count=sum(1 for item in items if item.is_active and balances.get(item.id, 0) <= item.reorder_level),
         query=query,
         status=status,
         form=form,
