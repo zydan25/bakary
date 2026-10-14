@@ -45,6 +45,18 @@
   </div>
 </section>
 
+<section class="section-title section-title-spaced"><div><h2>الإنتاج حسب الصنف</h2><p>إجمالي الكمية المنتجة لكل صنف خلال الفترة المحددة.</p></div></section>
+<section class="entity-list">
+  {% for product in products if produced_by_product.get(product.id, 0) > 0 %}
+  <article class="entity-card">
+    <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ product.name }}</h2><p>ملخص الإنتاج للفترة</p></div></div>
+    <div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(produced_by_product.get(product.id, 0)) }} {{ product.unit_label }}</strong></div>
+  </article>
+  {% else %}
+  <div class="empty-state"><h2>لا يوجد إنتاج مسجل</h2><p>سيظهر ملخص كل صنف بعد تسجيل العجنات.</p></div>
+  {% endfor %}
+</section>
+
 <section class="section-title section-title-spaced"><div><h2>العجنات المسجلة</h2><p>كل عجنة لها سجل مستقل، ويمكن مراجعة إنتاج كل صنف.</p></div></section>
 <section class="entity-list">
   {% for batch in batches %}
