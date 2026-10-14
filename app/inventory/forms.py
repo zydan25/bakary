@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from flask_wtf import FlaskForm
 from wtforms import DateField, DecimalField, HiddenField, IntegerField, SelectField, StringField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Length, NumberRange
+from wtforms.validators import DataRequired, Length, NumberRange, Optional
 
 
 class InventoryItemForm(FlaskForm):
@@ -16,7 +16,7 @@ class InventoryItemForm(FlaskForm):
     )
     code = StringField(
         "رمز المادة",
-        validators=[DataRequired(message="رمز المادة مطلوب."), Length(max=40)],
+        validators=[Optional(), Length(max=40)],
     )
     unit_label = StringField(
         "وحدة القياس",
