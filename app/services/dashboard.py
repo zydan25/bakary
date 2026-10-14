@@ -39,6 +39,24 @@ def normalize_quick_actions(value):
     """Return sanitized persisted shortcuts; None means use defaults."""
     if not isinstance(value, list):
         return [dict(action) for action in DEFAULT_QUICK_ACTIONS]
+    if value and all(isinstance(item, str) for item in value):
+        legacy = {
+            "product_new": "/products/?action=new",
+            "inventory_new": "/inventory/?action=new",
+            "production_batch": "/production/?action=batch",
+            "employee_new": "/staff/employees/?action=new",
+            "free_recipient": "/operations/free-distribution/?action=recipient",
+            "expense_new": "/finance/expenses/?action=new",
+            "products": "/products/",
+            "distributor_new": "/parties/distributors/?action=new",
+            "customer_new": "/parties/customers/?action=new",
+            "account": "/auth/account",
+        }
+        labels = {key: key.replace("_", " ").title() for key in legacy}
+        return [
+            {"label": labels[key], "url": legacy[key], "enabled": True}
+            for key in value if key in legacy
+        ]
     result = []
     for action in value[:20]:
         if not isinstance(action, dict):
