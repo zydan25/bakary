@@ -53,8 +53,15 @@
  <form method="post" action="{{ url_for('operations.create_free_recipient') }}" class="form-stack">
   {{ recipient_form.hidden_tag() }}
   <div class="form-field">{{ recipient_form.name.label(class_="field-label") }}{{ recipient_form.name(class_="form-control",placeholder="اسم المستفيد") }}{% for error in recipient_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ recipient_form.product_id.label(class_="field-label") }}{{ recipient_form.product_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in recipient_form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ recipient_form.quantity.label(class_="field-label") }}{{ recipient_form.quantity(class_="form-control",inputmode="decimal",placeholder="الكمية المصروفة",**{'data-quantity-words':'true','data-unit':'حبة'}) }}{% for error in recipient_form.quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-row">
+   <div class="form-field">{{ recipient_form.business_date.label(class_="field-label") }}{{ recipient_form.business_date(class_="form-control",type="date") }}{% for error in recipient_form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+   <div class="form-field">{{ recipient_form.period_code.label(class_="field-label") }}{{ recipient_form.period_code(class_="form-control",**{'data-searchable':'true'}) }}{% for error in recipient_form.period_code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  </div>
   <div class="form-field">{{ recipient_form.notes.label(class_="field-label") }}{{ recipient_form.notes(class_="form-control",rows="2",placeholder="ملاحظات اختيارية") }}</div>
-  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ المستفيد</button><a class="secondary-button" href="{{ url_for('operations.free_distribution') }}">إلغاء</a></div>
+  <div class="inline-note">سيُحفظ المستفيد ويُسجّل الصرف الأولي ضمن الفترة المحددة في خطوة واحدة.</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ حفظ المستفيد والصرف...">حفظ المستفيد وتسجيل الصرف</button><a class="secondary-button" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat(),period_code=selected_code) }}">إلغاء</a></div>
  </form>
 </dialog>
 
