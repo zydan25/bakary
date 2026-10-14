@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -220,7 +220,7 @@ def close_period_with_handover(
         select(
             func.coalesce(
                 func.sum(
-                    func.case(
+                    case(
                         (CashMovement.direction == "in", CashMovement.amount),
                         else_=-CashMovement.amount,
                     )
