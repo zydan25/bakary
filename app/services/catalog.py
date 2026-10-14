@@ -1,6 +1,7 @@
 """Product catalog operations and default-price policy."""
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -43,14 +44,8 @@ def save_product(
     unit_label = (unit_label or "").strip()
     if not name:
         raise CatalogRuleError("اسم الصنف مطلوب.")
-    if not code or len(code) > 40:
-        raise CatalogRuleError("رمز الصنف مطلوب ولا يتجاوز 40 حرفًا.")
     if not unit_label:
         raise CatalogRuleError("وحدة البيع مطلوبة.")
-
-    distributor_price = _price(default_distributor_price, "سعر الموزع العام")
-    customer_price = _price(default_customer_price, "سعر العميل العام")
-    shop_price = _price(shop_price, "سعر بيع المحل")
 
     product = None
     if product_id:
@@ -59,6 +54,16 @@ def save_product(
         )
         if product is None:
             raise CatalogRuleError("لم يتم العثور على الصنف المطلوب.")
+        if not code:
+            code = product.code
+    if not code:
+        code = f"PRD-{uuid4().hex[:12].upper()}"
+    if len(code) > 40:
+        raise CatalogRuleError("رمز الصنف لا يتجاوز 40 حرفًا.")
+
+    distributor_price = _price(default_distributor_price, "سعر الموزع العام")
+    customer_price = _price(default_customer_price, "سعر العميل العام")
+    shop_price = _price(shop_price, "سعر بيع المحل")
 
     try:
         if is_default:
