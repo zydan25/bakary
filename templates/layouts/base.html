@@ -156,6 +156,12 @@
           <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="child-symbol">✓</span><span>التقرير والتسليم النقدي</span></a></div>
         </section>
         {% endif %}
+        {% if current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('distribution.reports') %}
+        <section class="tree-section" data-nav-section="reports">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">▤</span><span class="tree-heading-title">التقارير</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
+          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('reports.index') }}"><span class="child-symbol">▤</span><span>مركز التقارير</span></a></div>
+        </section>
+        {% endif %}
         {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') or current_user.has_permission('cash.accounts.manage') %}
         <section class="tree-section" data-nav-section="finance">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">ر.ي</span><span class="tree-heading-title">الصندوق والحسابات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
