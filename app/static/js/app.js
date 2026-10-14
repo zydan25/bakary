@@ -84,7 +84,8 @@
   });
 
   document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (event) => {
+      if (event.defaultPrevented) return;
       const button = form.querySelector("button[type='submit'], input[type='submit']");
       if (!button || button.disabled) return;
       if (form.checkValidity && !form.checkValidity()) return;
@@ -99,7 +100,7 @@
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/static/sw.js").catch(() => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
         // The server-rendered application remains usable if installation is unavailable.
       });
     });
