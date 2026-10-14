@@ -28,9 +28,9 @@
       {% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
     </div>
     <div class="form-field">
-      {{ form.business_date.label(class_="field-label") }}
-      {{ form.business_date(class_="form-control", type="date", **{'data-payment-date':'true'}) }}
-      {% for error in form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      {{ form.period_id.label(class_="field-label") }}
+      {{ form.period_id(class_="form-control", **{'data-searchable':'true','data-payment-period':'true'}) }}
+      {% for error in form.period_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
     </div>
     <div class="form-field">
       {{ form.statement.label(class_="field-label") }}
@@ -71,7 +71,7 @@
 <script>
 (() => {
   const party = document.querySelector("[data-payment-party]");
-  const businessDate = document.querySelector("[data-payment-date]");
+  const selectedPeriod = document.querySelector("[data-payment-period]");
   const panel = document.getElementById("payment-summary");
   if (!party || !panel) return;
   let serial = 0;
@@ -79,10 +79,10 @@
   async function refresh() {
     const current = ++serial;
     if (!party.value || party.value === "0") { panel.hidden = true; return; }
-    const date = businessDate ? businessDate.value : "";
+    const periodId = selectedPeriod ? selectedPeriod.value : "";
     try {
       const url = "{{ url_for('distribution.payment_summary', party_type=party_type, party_id=0) }}".replace("/0?", "/" + encodeURIComponent(party.value) + "?").replace("/0", "/" + encodeURIComponent(party.value));
-      const response = await fetch(url + (url.includes("?") ? "&" : "?") + "date=" + encodeURIComponent(date || ""));
+      const response = await fetch(url + (url.includes("?") ? "&" : "?") + "period_id=" + encodeURIComponent(periodId || ""));
       const data = await response.json();
       if (current !== serial) return;
       if (!data.ok) { panel.hidden = true; return; }
@@ -101,7 +101,7 @@
     }
   }
   party.addEventListener("change", refresh);
-  if (businessDate) businessDate.addEventListener("change", refresh);
+  if (selectedPeriod) selectedPeriod.addEventListener("change", refresh);
   refresh();
 })();
 </script>
