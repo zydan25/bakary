@@ -8,8 +8,8 @@ from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.expense import Expense
-from app.models.finance import CashAccount, CashMovement, CashTransfer
+from app.models.expense import CashTransfer, Expense
+from app.models.finance import CashAccount, CashMovement
 
 
 CENT = Decimal("0.01")
