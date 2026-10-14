@@ -24,6 +24,19 @@ from app.services.finance import cash_account_balance
 from app.services.inventory import inventory_balance, inventory_valuation
 
 
+@reports_bp.after_request
+def prevent_report_caching(response):
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+def _safe_csv_cell(value):
+    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@", "\t", "\r"}:
+        return "'" + value
+    return value
+
+
 def _amount(value):
     return Decimal(str(value or 0))
 
@@ -349,7 +362,7 @@ def export_csv():
 
     stream = StringIO(newline="")
     writer = csv.writer(stream)
-    writer.writerows(rows)
+    writer.writerows([[_safe_csv_cell(cell) for cell in row] for row in rows])
     response = Response(stream.getvalue().encode("utf-8-sig"), mimetype="text/csv; charset=utf-8")
     response.headers["Content-Disposition"] = f'attachment; filename="bakary-report-{selected_date.strftime("%Y%m%d")}.csv"'
     response.headers["Cache-Control"] = "no-store"
