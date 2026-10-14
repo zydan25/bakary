@@ -38,7 +38,7 @@
 <section class="content-card">
  <div class="section-title"><div><h2>ديون الموزعين والعملاء</h2><p>الرصيد الحالي يشمل الديون المرحلة عبر الفترات.</p></div></div>
  {% for row in party_summaries %}
- <div class="product-history-row"><div><strong><a href="{{ url_for('parties.party_detail',party_type=row.party_type,party_id=row.party.id) }}">{{ row.party.name }}</a></strong><small>{{ 'موزع' if row.party_type == 'distributor' else 'عميل' }} · مسحوب {{ "{:,.3f}".format(row.quantity) }} · قيمة الصرف {{ "{:,.2f}".format(row.issued) }} · مدفوع {{ "{:,.2f}".format(row.paid) }}</small></div><strong>الرصيد {{ "{:,.2f}".format(row.remaining_due) }} ريال</strong></div>
+ <div class="product-history-row"><div><strong><a href="{{ url_for('parties.party_detail',party_type=row.party_type,party_id=row.party.id) }}">{{ row.party.name }}</a></strong><small>{{ 'موزع' if row.party_type == 'distributor' else 'عميل' }} · مسحوب {{ "{:,.3f}".format(row.quantity) }} · قيمة الصرف {{ "{:,.2f}".format(row.issued) }} · مدفوع {{ "{:,.2f}".format(row.paid) }}</small><small>الرصيد حتى نهاية هذه الفترة: {{ "{:,.2f}".format(row.remaining_due) }} ريال</small></div><strong>الرصيد الحالي {{ "{:,.2f}".format(row.current_balance) }} ريال</strong></div>
  {% else %}<p class="product-muted-empty">لا توجد حركات صرف أو دفع لهذه الفترة.</p>{% endfor %}
 </section>
 <section class="content-card">
