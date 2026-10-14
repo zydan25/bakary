@@ -45,7 +45,7 @@
  <article class="entity-card combined-party-card" data-searchable-card data-search-text="{{ item.name }} {{ item.phone or '' }}">
   <div class="entity-top">
    <div class="entity-avatar">{{ '♙' if item.party_type == 'distributor' else '♧' }}</div>
-   <div class="entity-main"><h2>{{ item.name }}</h2><p>{{ item.phone or 'لا يوجد رقم هاتف' }}</p></div>
+   <div class="entity-main"><h2><a class="entity-title-link" href="{{ url_for('parties.party_detail',party_type=item.party_type,party_id=item.id) }}">{{ item.name }}</a></h2><p>{{ item.phone or 'لا يوجد رقم هاتف' }}</p></div>
    <div class="combined-party-badges">
     <span class="status-badge status-primary">{{ 'موزع' if item.party_type == 'distributor' else 'عميل' }}</span>
     <span class="status-badge {{ 'status-primary' if item.is_active else 'status-muted' }}">{{ 'نشط' if item.is_active else 'موقوف' }}</span>
