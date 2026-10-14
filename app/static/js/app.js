@@ -50,11 +50,16 @@
     }
   });
 
-  const currentPath = window.location.pathname.replace(/\\/+$/, "") || "/";
+  function normalizePath(path) {
+    let value = path || "/";
+    while (value.length > 1 && value.endsWith("/")) value = value.slice(0, -1);
+    return value;
+  }
+  const currentPath = normalizePath(window.location.pathname);
   const routeCandidates = [...document.querySelectorAll("[data-nav-link]")].map((link) => {
     try {
       const target = new URL(link.href, window.location.origin);
-      const linkPath = target.pathname.replace(/\\/+$/, "") || "/";
+      const linkPath = normalizePath(target.pathname);
       const matches = currentPath === linkPath || (linkPath !== "/" && currentPath.startsWith(linkPath + "/"));
       return matches ? { link, linkPath, section: link.closest("[data-nav-section]") } : null;
     } catch (_) {
