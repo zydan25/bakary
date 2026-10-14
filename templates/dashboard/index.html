@@ -79,7 +79,12 @@
     <a class="dashboard-module module-ready" href="{{ url_for('parties.distributors') }}"><span class="dashboard-module-icon">{{ ui_icon('parties', 32) }}</span><strong>الموزعون والعملاء</strong><small>البطاقات والأسعار الخاصة والحسابات</small></a>
     {% endif %}
     {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
-    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('truck', 32) }}</span><strong>الصرف والتحصيل</strong><small>الصرف والدفع وكشوف الحساب</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% if current_user.has_permission('distribution.issue') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('distribution.issue', party_type='distributor') }}"><span class="dashboard-module-icon">{{ ui_icon('truck', 32) }}</span><strong>صرف موزع</strong><small>تسجيل كمية الصرف والسعر الفعلي</small></a>
+    {% endif %}
+    {% if current_user.has_permission('distribution.payment') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('distribution.payment', party_type='distributor') }}"><span class="dashboard-module-icon">{{ ui_icon('wallet', 32) }}</span><strong>دفع نقدي</strong><small>قبض الدفعة وربطها بالصندوق</small></a>
+    {% endif %}
     {% endif %}
     {% if current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
     <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('oven', 32) }}</span><strong>العجنات والإنتاج</strong><small>الإنتاج وترحيل الفترات</small><span class="module-stage-label">مرحلة قادمة</span></article>
