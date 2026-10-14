@@ -4,6 +4,7 @@ from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_, select
 
+from app.auth.decorators import permission_required
 from app.extensions import db
 from app.models.product import Product
 from app.products import products_bp
@@ -12,7 +13,7 @@ from app.services.catalog import CatalogRuleError, save_product
 
 
 @products_bp.route("/", methods=["GET", "POST"])
-@login_required
+@permission_required("products.view")
 def index():
     query = (request.args.get("q") or "").strip()
     status = request.args.get("status", "active")

@@ -49,6 +49,7 @@ def create_app(config_name=None, test_config=None):
     from app.auth import auth_bp
     from app.dashboard import dashboard_bp
     from app.health import health_bp
+    from app.products import products_bp
     from app.cli import register_cli
 
     @login_manager.user_loader
@@ -61,6 +62,7 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(products_bp)
     register_cli(app)
 
     @app.before_request

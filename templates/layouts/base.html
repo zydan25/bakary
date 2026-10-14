@@ -53,6 +53,25 @@
           </div>
         </section>
 
+        {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
+        <section class="tree-section" data-nav-section="catalog">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">♨</span><span class="tree-heading-title">الأصناف والتسعير</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            <a class="tree-link" data-nav-link href="{{ url_for('products.index') }}">
+              <span class="child-symbol">♧</span><span>الأصناف</span>
+            </a>
+            {% if current_user.has_permission('products.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('products.index', action='new') }}">
+              <span class="child-symbol">＋</span><span>إضافة صنف</span>
+            </a>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
+
         <section class="tree-section" data-nav-section="access">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
             <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
