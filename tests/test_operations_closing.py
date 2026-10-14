@@ -150,7 +150,7 @@ def test_receiver_role_can_open_handover_without_production_edit_permission():
         cleanup(app)
 
 
-def test_free_recipient_form_requires_quantity_and_posts_initial_free_issue():
+def test_free_recipient_form_requires_quantity_and_saves_daily_target():
     app, (actor_id, product_id, _employee_id) = setup()
     try:
         client = app.test_client()
@@ -179,11 +179,11 @@ def test_free_recipient_form_requires_quantity_and_posts_initial_free_issue():
         assert created.status_code == 200
         with app.app_context():
             recipient = db.session.scalar(select(FreeRecipient).where(FreeRecipient.name == "مستفيد جديد"))
-            issue = db.session.scalar(select(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id))
             assert recipient is not None
-            assert issue is not None
-            assert issue.product_id == product_id
-            assert issue.quantity == Decimal("7.500")
+            assert recipient.default_product_id == product_id
+            assert recipient.daily_quantity == Decimal("7.500")
+            issue = db.session.scalar(select(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id))
+            assert issue is None
     finally:
         cleanup(app)
 
