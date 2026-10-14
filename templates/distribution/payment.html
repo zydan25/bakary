@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+{% block title %}دفع نقدي — {{ meta.plural }}{% endblock %}
+{% block page_heading %}دفع نقدي{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div>
+    <p class="eyebrow">التحصيل والصندوق</p>
+    <h1>دفع نقدي — {{ meta.plural }}</h1>
+    <p class="heading-subtitle">يُسجّل الدفع في دفتر الحساب ويُضاف إلى الصندوق الرئيسي ضمن معاملة واحدة.</p>
+  </div>
+  <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">رجوع للحسابات</a>
+</section>
+
+<section class="content-card distribution-context">
+  <div class="context-icon">ر.ي</div>
+  <div><strong>تسجيل دفعة على الحساب</strong><p>{{ period_label }} · التاريخ الافتراضي اليوم</p></div>
+</section>
+
+<form method="post" class="distribution-form" id="payment-form">
+  {{ form.hidden_tag() }}
+  <section class="content-card payment-form-card">
+    <div class="section-title"><div><h2>بيانات الدفع</h2><p>اختر الحساب لمراجعة ملخص الصرف قبل تسجيل الدفعة.</p></div></div>
+    <div class="form-field">
+      {{ form.party_id.label(class_="field-label") }}
+      {{ form.party_id(class_="form-control", **{'data-searchable':'true','data-payment-party':'true'}) }}
+      {% for error in form.party_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="party-summary-panel" id="payment-summary" {% if not payment_summary %}hidden{% endif %}>
+      <div class="party-summary-title">ملخص الحساب للفترة المحددة</div>
+      <div class="summary-line"><span>الكمية المسحوبة</span><strong id="summary-quantity">{% if payment_summary %}{{ payment_summary.quantity }} حبة{% else %}—{% endif %}</strong></div>
+      <div class="summary-line" id="summary-unit-row" {% if not payment_summary or payment_summary.unit_price is none %}hidden{% endif %}><span>سعر الحبة</span><strong id="summary-unit">{% if payment_summary and payment_summary.unit_price is not none %}{{ "{:,.2f}".format(payment_summary.unit_price) }} ريال{% endif %}</strong></div>
+      <div class="summary-line"><span>قيمة الصرف للفترة</span><strong id="summary-issue-total">{% if payment_summary %}{{ "{:,.2f}".format(payment_summary.issue_total) }} ريال{% else %}—{% endif %}</strong></div>
+      <div class="summary-line"><span>متأخرات قبل التاريخ المحدد</span><strong id="summary-arrears" class="summary-red">{% if payment_summary %}{{ "{:,.2f}".format(payment_summary.arrears) }} ريال{% else %}—{% endif %}</strong></div>
+      <div class="summary-line summary-line-total"><span>إجمالي المستحق للفترة</span><strong id="summary-due">{% if payment_summary %}{{ "{:,.2f}".format(payment_summary.total_due) }} ريال{% else %}—{% endif %}</strong></div>
+      <div class="summary-line"><span>الرصيد الحالي</span><strong id="summary-current">{% if payment_summary %}{{ "{:,.2f}".format(payment_summary.current_balance|abs) }} ريال{% if payment_summary.current_balance > 0 %} عليه{% elif payment_summary.current_balance < 0 %} له{% else %} متزن{% endif %}{% else %}—{% endif %}</strong></div>
+      <small id="summary-note" class="summary-note">ملخص للعمليات المسجلة في التاريخ المحدد؛ كشف الفترة التفصيلي متاح من حساب الطرف.</small>
+    </div>
+
+    <div class="form-field">
+      {{ form.amount.label(class_="field-label") }}
+      {{ form.amount(class_="form-control", inputmode="decimal", placeholder="أدخل المبلغ المدفوع", **{'data-amount-words':'true','data-currency':'ريال'}) }}
+      {% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.business_date.label(class_="field-label") }}
+      {{ form.business_date(class_="form-control", type="date", **{'data-payment-date':'true'}) }}
+      {% for error in form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.statement.label(class_="field-label") }}
+      {{ form.statement(class_="form-control", rows="2", placeholder="بيان اختياري للدفع") }}
+      {% for error in form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="dialog-actions">
+      <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل الدفع...">تسجيل دفع</button>
+      <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">إلغاء</a>
+    </div>
+  </section>
+</form>
+
+{% if receipt %}
+<dialog class="form-dialog receipt-dialog" data-auto-open="true" id="payment-receipt">
+  <div class="dialog-header"><div><p class="eyebrow">إيصال قبض</p><h2>تم تسجيل الدفع</h2></div><a class="dialog-close" href="{{ url_for('distribution.payment', party_type=party_type) }}" aria-label="إغلاق">×</a></div>
+  <div class="receipt-content" id="receipt-content">
+    <div class="receipt-brand">نظام إدارة المخبز</div>
+    <div class="receipt-number">رقم الإيصال: {{ receipt.id }}</div>
+    <div class="receipt-line"><span>التاريخ</span><strong>{{ receipt.business_date.strftime('%Y-%m-%d') }}</strong></div>
+    <div class="receipt-line"><span>اسم الحساب</span><strong>{{ receipt.party.name }}</strong></div>
+    <div class="receipt-line"><span>الكمية المسحوبة في اليوم</span><strong>{{ receipt.quantity }} حبة</strong></div>
+    <div class="receipt-line"><span>قيمة الصرف في اليوم</span><strong>{{ "{:,.2f}".format(receipt.issue_total) }} ريال</strong></div>
+    <div class="receipt-line"><span>الرصيد السابق</span><strong>{{ "{:,.2f}".format(receipt.balance_before|abs) }} ريال {% if receipt.balance_before > 0 %}عليه{% elif receipt.balance_before < 0 %}له{% else %}متزن{% endif %}</strong></div>
+    <div class="receipt-line receipt-total"><span>المبلغ المدفوع</span><strong>{{ "{:,.2f}".format(receipt.amount) }} ريال</strong></div>
+    <div class="receipt-line"><span>الرصيد بعد الدفع</span><strong>{{ "{:,.2f}".format(receipt.balance_after|abs) }} ريال {% if receipt.balance_after > 0 %}عليه{% elif receipt.balance_after < 0 %}له{% else %}متزن{% endif %}</strong></div>
+    {% if receipt.statement %}<p class="receipt-statement">{{ receipt.statement }}</p>{% endif %}
+    <div class="receipt-signature">برمجة وتصميم م. زيدان العطاب · يمن كود للتقنيات الذكية</div>
+    <div class="dialog-actions">
+      <button type="button" class="primary-button button-wide" data-save-receipt data-receipt-title="إيصال قبض" data-receipt-party="{{ receipt.party.name }}" data-receipt-date="{{ receipt.business_date.strftime('%Y-%m-%d') }}" data-receipt-quantity="{{ receipt.quantity }} حبة" data-receipt-total="{{ receipt.amount }}" data-receipt-detail="الرصيد بعد الدفع: {{ receipt.balance_after }}">حفظ كصورة</button>
+      <a class="secondary-button" href="{{ url_for('distribution.payment', party_type=party_type) }}">إغلاق</a>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const party = document.querySelector("[data-payment-party]");
+  const businessDate = document.querySelector("[data-payment-date]");
+  const panel = document.getElementById("payment-summary");
+  if (!party || !panel) return;
+  let serial = 0;
+  const money = value => Number(value || 0).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) + " ريال";
+  async function refresh() {
+    const current = ++serial;
+    if (!party.value || party.value === "0") { panel.hidden = true; return; }
+    const date = businessDate ? businessDate.value : "";
+    try {
+      const url = "{{ url_for('distribution.payment_summary', party_type=party_type, party_id=0) }}".replace("/0?", "/" + encodeURIComponent(party.value) + "?").replace("/0", "/" + encodeURIComponent(party.value));
+      const response = await fetch(url + (url.includes("?") ? "&" : "?") + "date=" + encodeURIComponent(date || ""));
+      const data = await response.json();
+      if (current !== serial) return;
+      if (!data.ok) { panel.hidden = true; return; }
+      panel.hidden = false;
+      document.getElementById("summary-quantity").textContent = data.quantity + " حبة";
+      const unitRow = document.getElementById("summary-unit-row");
+      unitRow.hidden = !data.unit_price;
+      document.getElementById("summary-unit").textContent = data.unit_price ? money(data.unit_price) : "";
+      document.getElementById("summary-issue-total").textContent = money(data.issue_total);
+      document.getElementById("summary-arrears").textContent = money(data.arrears);
+      document.getElementById("summary-due").textContent = money(data.total_due);
+      document.getElementById("summary-current").textContent = money(Math.abs(Number(data.current_balance))) + " " + data.balance_label;
+    } catch (_) {
+      panel.hidden = false;
+      document.getElementById("summary-note").textContent = "تعذر تحديث ملخص الحساب الآن. سيتم التحقق من الحساب عند التسجيل.";
+    }
+  }
+  party.addEventListener("change", refresh);
+  if (businessDate) businessDate.addEventListener("change", refresh);
+  refresh();
+})();
+</script>
+{% endblock %}
