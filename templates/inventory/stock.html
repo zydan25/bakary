@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+{% block title %}تسجيل المخزون{% endblock %}
+{% block page_heading %}تسجيل المخزون{% endblock %}
+{% block content %}
+<section class="page-heading-row"><div><p class="eyebrow">حركة المخزون</p><h1>تسجيل كمية للمادة</h1><p class="heading-subtitle">الرصيد الافتتاحي يسجل مرة واحدة، وبعده استخدم «إضافة مخزون» لكل زيادة جديدة.</p></div><a class="secondary-button" href="{{ url_for('inventory.index') }}">رجوع للمخزون</a></section>
+
+<dialog class="form-dialog" id="stock-movement-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}">
+  <div class="dialog-header"><div><p class="eyebrow">حركة واردة</p><h2>رصيد افتتاحي أو إضافة مخزون</h2></div><a class="dialog-close" href="{{ url_for('inventory.index') }}" aria-label="إغلاق">×</a></div>
+  <form method="post" class="form-stack">
+    {{ form.hidden_tag() }}
+    <div class="form-field"><label class="field-label" for="item_id">المادة الخام</label>{{ form.item_id(class_="form-control", **{'data-searchable':'true','data-stock-item':'true'}) }}{% for error in form.item_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-field">{{ form.movement_type.label(class_="field-label") }}{{ form.movement_type(class_="form-control", **{'data-searchable':'true'}) }}{% for error in form.movement_type.errors %}<small class="field-error">{{ error }}</small>{% endfor %}<small class="subtle-hint">لا يمكن تسجيل أكثر من رصيد افتتاحي واحد للمادة.</small></div>
+    <div class="form-field">{{ form.quantity.label(class_="field-label") }}{{ form.quantity(class_="form-control", inputmode="decimal", placeholder="أدخل الكمية", **{'data-quantity-words':'true','data-unit':selected_item.unit_label if selected_item else 'وحدة'}) }}{% for error in form.quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-field">{{ form.business_date.label(class_="field-label") }}{{ form.business_date(class_="form-control", type="date") }}{% for error in form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-field">{{ form.statement.label(class_="field-label") }}{{ form.statement(class_="form-control", rows="2", placeholder="مثال: الكمية الموجودة عند بدء استخدام النظام") }}{% for error in form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل المخزون...">تسجيل الكمية</button><a class="secondary-button" href="{{ url_for('inventory.index') }}">إلغاء</a></div>
+  </form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const item = document.querySelector("[data-stock-item]");
+  const quantity = document.querySelector("[data-quantity-words='true']");
+  const units = {{ item_units|tojson }};
+  if (!item || !quantity) return;
+  item.addEventListener("change", () => {
+    quantity.dataset.unit = units[item.value] || "وحدة";
+    quantity.dispatchEvent(new Event("input", {bubbles:true}));
+  });
+})();
+</script>
+{% endblock %}
