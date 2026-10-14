@@ -1,0 +1,14 @@
+{% extends "layouts/base.html" %}
+{% block title %}تعديل دفعة رقم {{ payment.id }}{% endblock %}
+{% block page_heading %}تعديل الدفعة{% endblock %}
+{% block content %}
+<section class="page-heading-row"><div><p class="eyebrow">سجل الدفعات</p><h1>تعديل دفعة رقم {{ payment.id }}</h1><p class="heading-subtitle">{{ period_day_name(period.business_date) }} · {{ period_label(period.period_code) }} — الفترة ما زالت مفتوحة.</p></div><a class="secondary-button" href="{{ url_for('distribution.payment_records') }}">العودة لسجل الدفعات</a></section>
+<form method="post" class="content-card distribution-edit-card form-stack">
+ {{ form.hidden_tag() }}
+ <div class="form-field">{{ form.party_id.label(class_="field-label") }}{{ form.party_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in form.party_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="form-field">{{ form.amount.label(class_="field-label") }}{{ form.amount(class_="form-control",inputmode="decimal",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="form-field">{{ form.statement.label(class_="field-label") }}{{ form.statement(class_="form-control",rows="2") }}{% for error in form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="inline-note">سيُحدّث قيد الحساب وحركة الصندوق المرتبطة بالدفعة معًا.</div>
+ <div class="dialog-actions"><button class="primary-button button-wide" type="submit">حفظ التعديلات</button><a class="secondary-button" href="{{ url_for('distribution.payment_records') }}">إلغاء</a></div>
+</form>
+{% endblock %}
