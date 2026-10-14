@@ -87,7 +87,8 @@ def test_internal_transfer_posts_both_sides_once():
     try:
         with app.app_context():
             target = create_cash_account(
-                name="حساب البيت", code="HOME", account_type="cash", actor_id=actor_id
+                name="حساب البيت", code="HOME", account_type="cash",
+                opening_balance="25.00", actor_id=actor_id
             )
             transfer, created = create_cash_transfer(
                 source_account_id=main_id, target_account_id=target.id,
@@ -105,7 +106,13 @@ def test_internal_transfer_posts_both_sides_once():
             assert again.id == transfer.id
             assert repeated is False
             assert cash_account_balance(main_id) == Decimal("380.00")
-            assert cash_account_balance(target.id) == Decimal("120.00")
+            assert cash_account_balance(target.id) == Decimal("145.00")
+            opening_movement = db.session.scalar(select(CashMovement).where(
+                CashMovement.source_type == "cash_account_opening",
+                CashMovement.source_id == target.id,
+            ))
+            assert opening_movement is not None
+            assert opening_movement.amount == Decimal("25.00")
             assert db.session.scalar(select(func.count()).select_from(CashTransfer)) == 1
             sides = db.session.scalars(select(CashMovement).where(
                 CashMovement.source_id == transfer.id,
