@@ -1,6 +1,7 @@
 """Cash-account administration, expenses and internal transfers."""
 
 from datetime import date
+from app.services.clock import business_today
 from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
@@ -109,7 +110,7 @@ def expenses():
     main = next((row for row in accounts if row.is_main), None)
     if request.method == "GET":
         form.cash_account_id.data = main.id if main else (accounts[0].id if accounts else 0)
-        form.business_date.data = date.today()
+        form.business_date.data = business_today()
         form.request_key.data = uuid4().hex
     if request.method == "POST":
         if not current_user.has_permission("expenses.manage"):
@@ -164,7 +165,7 @@ def transfers():
     if request.method == "GET":
         form.source_account_id.data = main.id if main else (accounts[0].id if accounts else 0)
         form.target_account_id.data = other.id if other else 0
-        form.business_date.data = date.today()
+        form.business_date.data = business_today()
         form.request_key.data = uuid4().hex
     if request.method == "POST":
         if not current_user.has_permission("finance.manage"):
