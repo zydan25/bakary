@@ -89,12 +89,17 @@ def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
 
         settings_page = client.get("/settings/")
         assert settings_page.status_code == 200
-        assert "أزرار الإجراءات السريعة" in settings_page.get_data(as_text=True)
-        assert 'name="quick_actions"' in settings_page.get_data(as_text=True)
+        assert "تخصيص أزرار الرئيسية" in settings_page.get_data(as_text=True)
+        assert 'name="action_label_0"' in settings_page.get_data(as_text=True)
+        assert 'id="add-dashboard-shortcut"' in settings_page.get_data(as_text=True)
 
         response = client.post("/settings/", data={
             "action": "save_quick_actions",
-            "quick_actions": ["products", "account"],
+            "action_label_0": "صرف عميل مخصص",
+            "action_url_0": "/distribution/payment/customer",
+            "action_enabled_0": "1",
+            "action_label_1": "اختصار مخفي",
+            "action_url_1": "/auth/account",
         }, follow_redirects=True)
         assert response.status_code == 200
 
@@ -103,13 +108,16 @@ def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
                 select(Setting).where(Setting.key == "dashboard_quick_actions")
             )
             assert saved is not None
-            assert saved.value == ["products", "account"]
+            assert saved.value == [
+                {"label": "صرف عميل مخصص", "url": "/distribution/payment/customer", "enabled": True},
+                {"label": "اختصار مخفي", "url": "/auth/account", "enabled": False},
+            ]
 
         dashboard = client.get("/dashboard/")
         assert dashboard.status_code == 200
         html = dashboard.get_data(as_text=True)
-        assert "إجراءات سريعة" in html
-        assert 'data-quick-action="production_batch"' not in html
+        assert "صرف عميل مخصص" in html
+        assert "اختصار مخفي" not in html
         assert 'data-quick-action="products"' in html
     finally:
         cleanup(app)
