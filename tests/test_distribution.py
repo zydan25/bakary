@@ -5,6 +5,9 @@ from sqlalchemy import select, func
 from app import create_app
 from app.extensions import db
 from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
+from app.models.production import BusinessPeriod
+from app.models.user import User
+from app.services.ledger import create_issue, create_payment
 from app.models.finance import CashAccount, CashMovement
 from app.models.party import Party, PartyPrice
 from app.models.product import Product
@@ -103,5 +106,124 @@ def test_issue_report_and_statement_render():
         assert "تقرير صرف الموزعين" in report.get_data(as_text=True)
         assert statement.status_code == 200
         assert "كشف حساب موزع اختبار" in statement.get_data(as_text=True)
+    finally:
+        cleanup(app)
+
+
+def _open_daily_period_for_test():
+    actor = db.session.scalar(select(User).where(User.phone == "+967771234567"))
+    period = db.session.scalar(select(BusinessPeriod).where(
+        BusinessPeriod.business_date == date.today(),
+        BusinessPeriod.period_code == "daily",
+    ))
+    if period is None:
+        period = BusinessPeriod(
+            business_date=date.today(),
+            period_code="daily",
+            status="open",
+            opened_by_id=actor.id,
+        )
+        db.session.add(period)
+        db.session.commit()
+    return actor.id, period
+
+
+def test_open_period_issue_can_be_edited_and_deleted_with_ledger():
+    app, (party_id, product_id) = setup()
+    try:
+        with app.app_context():
+            actor_id, _period = _open_daily_period_for_test()
+            issue, _ = create_issue(
+                party_id=party_id, product_id=product_id, quantity=4,
+                business_date=date.today(), period_code="daily",
+                statement="قبل التعديل", actor_id=actor_id,
+                request_key="issue-crud-test-0001",
+            )
+            issue_id = issue.id
+        client = app.test_client()
+        login(client)
+        listing = client.get("/distribution/issues")
+        assert listing.status_code == 200
+        assert "قبل التعديل" in listing.get_data(as_text=True)
+
+        edited = client.post(f"/distribution/issues/{issue_id}/edit", data={
+            "party_id": str(party_id),
+            "product_id": str(product_id),
+            "quantity": "7",
+            "statement": "بعد التعديل",
+        }, follow_redirects=True)
+        assert edited.status_code == 200
+        with app.app_context():
+            issue = db.session.get(DistributionIssue, issue_id)
+            ledger = db.session.scalar(select(PartyLedgerEntry).where(
+                PartyLedgerEntry.source_type == "distribution_issue",
+                PartyLedgerEntry.source_id == issue_id,
+            ))
+            assert issue.quantity == 7
+            assert issue.total_amount == Decimal("56.00")
+            assert ledger.debit_amount == Decimal("56.00")
+            assert ledger.credit_amount == Decimal("0.00")
+
+        deleted = client.post(f"/distribution/issues/{issue_id}/delete", data={}, follow_redirects=True)
+        assert deleted.status_code == 200
+        with app.app_context():
+            assert db.session.get(DistributionIssue, issue_id) is None
+            assert db.session.scalar(select(PartyLedgerEntry).where(
+                PartyLedgerEntry.source_type == "distribution_issue",
+                PartyLedgerEntry.source_id == issue_id,
+            )) is None
+    finally:
+        cleanup(app)
+
+
+def test_open_period_payment_edit_and_delete_update_linked_records():
+    app, (party_id, _product_id) = setup()
+    try:
+        with app.app_context():
+            actor_id, _period = _open_daily_period_for_test()
+            payment, _ = create_payment(
+                party_id=party_id, amount="30.00", business_date=date.today(),
+                period_code="daily", statement="دفعة قبل التعديل", actor_id=actor_id,
+                request_key="payment-crud-test-0001",
+            )
+            payment_id = payment.id
+        client = app.test_client()
+        login(client)
+        listing = client.get("/distribution/payments")
+        assert listing.status_code == 200
+        assert "دفعة قبل التعديل" in listing.get_data(as_text=True)
+
+        edited = client.post(f"/distribution/payments/{payment_id}/edit", data={
+            "party_id": str(party_id), "amount": "45.50",
+            "statement": "دفعة بعد التعديل",
+        }, follow_redirects=True)
+        assert edited.status_code == 200
+        with app.app_context():
+            payment = db.session.get(PartyPayment, payment_id)
+            ledger = db.session.scalar(select(PartyLedgerEntry).where(
+                PartyLedgerEntry.source_type == "party_payment",
+                PartyLedgerEntry.source_id == payment_id,
+            ))
+            movement = db.session.scalar(select(CashMovement).where(
+                CashMovement.source_type == "party_payment",
+                CashMovement.source_id == payment_id,
+            ))
+            assert payment.amount == Decimal("45.50")
+            assert ledger.credit_amount == Decimal("45.50")
+            assert movement.amount == Decimal("45.50")
+            assert movement.direction == "in"
+
+        deleted = client.post(f"/distribution/payments/{payment_id}/delete", data={}, follow_redirects=True)
+        assert deleted.status_code == 200
+        with app.app_context():
+            assert db.session.get(PartyPayment, payment_id) is None
+            assert db.session.scalar(select(PartyLedgerEntry).where(
+                PartyLedgerEntry.source_type == "party_payment",
+                PartyLedgerEntry.source_id == payment_id,
+            )) is None
+            assert db.session.scalar(select(CashMovement).where(
+                CashMovement.source_type == "party_payment",
+                CashMovement.source_id == payment_id,
+            )) is None
     finally:
         cleanup(app)
