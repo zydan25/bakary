@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -11,6 +11,8 @@ from app.models.employee import Employee
 from app.models.expense import Expense
 from app.models.finance import CashAccount, CashMovement
 from app.models.free_distribution import FreeDistribution, FreeRecipient
+from app.models.inventory import InventoryItem, InventoryMovement
+from app.models.closing import PeriodRawMaterialClose
 from app.models.production import BusinessPeriod
 from app.models.product import Product
 from app.models.role import Permission, Role
@@ -144,5 +146,114 @@ def test_receiver_role_can_open_handover_without_production_edit_permission():
         assert response.status_code == 200
         assert client.get("/operations/closing/").status_code == 200
         assert client.get("/production/").status_code == 403
+    finally:
+        cleanup(app)
+
+
+def test_free_recipient_form_requires_quantity_and_posts_initial_free_issue():
+    app, (actor_id, product_id, _employee_id) = setup()
+    try:
+        client = app.test_client()
+        response = client.post("/auth/login", data={
+            "phone": "+967771234567", "password": "Strong-pass-123"
+        }, follow_redirects=True)
+        assert response.status_code == 200
+
+        bad = client.post("/operations/free-recipients/", data={
+            "name": "مستفيد كمية ناقصة",
+            "product_id": str(product_id),
+            "business_date": date.today().isoformat(),
+            "period_code": "daily",
+        }, follow_redirects=True)
+        assert bad.status_code == 200
+        assert "أدخل الكمية المصروفة" in bad.get_data(as_text=True)
+
+        created = client.post("/operations/free-recipients/", data={
+            "name": "مستفيد جديد",
+            "product_id": str(product_id),
+            "quantity": "7.500",
+            "business_date": date.today().isoformat(),
+            "period_code": "daily",
+            "notes": "صرف أولي",
+        }, follow_redirects=True)
+        assert created.status_code == 200
+        with app.app_context():
+            recipient = db.session.scalar(select(FreeRecipient).where(FreeRecipient.name == "مستفيد جديد"))
+            issue = db.session.scalar(select(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id))
+            assert recipient is not None
+            assert issue is not None
+            assert issue.product_id == product_id
+            assert issue.quantity == Decimal("7.500")
+    finally:
+        cleanup(app)
+
+
+def test_period_close_records_raw_material_opening_and_calculated_consumption():
+    app, (actor_id, product_id, employee_id) = setup()
+    try:
+        with app.app_context():
+            batch, created = create_dough_batch(
+                product_id=product_id,
+                produced_quantity="100",
+                business_date=date.today(),
+                period_code="daily",
+                actor_id=actor_id,
+                statement="إنتاج تجريبي",
+                idempotency_key="raw-close-dough-001",
+            )
+            assert created
+            period = db.session.get(BusinessPeriod, batch.period_id)
+            material = InventoryItem(
+                name="دقيق الإقفال",
+                code="FLOUR-CLOSE-TEST",
+                unit_label="كجم",
+                is_active=True,
+                reorder_level=Decimal("1.000"),
+                created_by_id=actor_id,
+            )
+            db.session.add(material)
+            db.session.flush()
+            db.session.add(InventoryMovement(
+                item_id=material.id,
+                movement_type="opening_balance",
+                direction="in",
+                quantity=Decimal("100.000"),
+                business_date=date.today() - timedelta(days=1),
+                source_type="raw_close_test_opening",
+                source_id=material.id,
+                statement="رصيد افتتاحي للاختبار",
+                created_by_id=actor_id,
+            ))
+            db.session.commit()
+
+            _handover, _rows, _expected = close_period_with_handover(
+                period_id=period.id,
+                employee_id=employee_id,
+                received_amount="1500.00",
+                expenses_amount="0.00",
+                handed_to_cash_amount="1500.00",
+                damaged_quantities={product_id: "0"},
+                carried_quantities={product_id: "0"},
+                raw_material_endings={material.id: "80.000"},
+                statement="إقفال مع جرد مواد خام",
+                actor_id=actor_id,
+            )
+            saved = db.session.scalar(select(PeriodRawMaterialClose).where(
+                PeriodRawMaterialClose.period_id == period.id,
+                PeriodRawMaterialClose.item_id == material.id,
+            ))
+            assert saved is not None
+            assert saved.opening_quantity == Decimal("100.000")
+            assert saved.incoming_quantity == Decimal("0.000")
+            assert saved.calculated_consumption == Decimal("20.000")
+            assert saved.ending_quantity == Decimal("80.000")
+            material_consumption = db.session.scalar(select(InventoryMovement).where(
+                InventoryMovement.item_id == material.id,
+                InventoryMovement.source_type == "period_raw_material_close",
+                InventoryMovement.source_id == period.id,
+            ))
+            assert material_consumption is not None
+            assert material_consumption.direction == "out"
+            assert material_consumption.quantity == Decimal("20.000")
     finally:
         cleanup(app)
