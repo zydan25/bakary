@@ -4,7 +4,7 @@ from datetime import date
 from app.services.clock import business_today
 
 from flask_wtf import FlaskForm
-from wtforms import DateField, HiddenField, IntegerField, SelectField, TextAreaField, StringField
+from wtforms import HiddenField, IntegerField, SelectField, TextAreaField, StringField
 from wtforms.validators import DataRequired, Length, NumberRange
 
 
@@ -26,11 +26,10 @@ class IssueForm(FlaskForm):
             NumberRange(min=1, message="يجب أن تكون الكمية أكبر من صفر."),
         ],
     )
-    business_date = DateField(
-        "تاريخ العملية",
-        format="%Y-%m-%d",
-        default=business_today,
-        validators=[DataRequired(message="تاريخ العملية مطلوب.")],
+    period_id = SelectField(
+        "الفترة التشغيلية",
+        coerce=int,
+        validators=[DataRequired(message="اختر فترة مفتوحة.")],
     )
     statement = TextAreaField(
         "البيان",
@@ -49,11 +48,10 @@ class PaymentForm(FlaskForm):
         "المبلغ المدفوع",
         validators=[DataRequired(message="أدخل المبلغ المدفوع.")],
     )
-    business_date = DateField(
-        "تاريخ الدفع",
-        format="%Y-%m-%d",
-        default=business_today,
-        validators=[DataRequired(message="تاريخ الدفع مطلوب.")],
+    period_id = SelectField(
+        "الفترة التشغيلية",
+        coerce=int,
+        validators=[DataRequired(message="اختر فترة مفتوحة.")],
     )
     statement = TextAreaField(
         "البيان",
