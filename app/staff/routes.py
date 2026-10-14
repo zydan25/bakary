@@ -198,11 +198,47 @@ def roles():
 
     permissions = db.session.scalars(select(Permission).order_by(Permission.code.asc())).all()
     selected_permission_codes = {permission.code for permission in selected_role.permissions} if selected_role else set()
+
+    group_names = {
+        "dashboard": "الرئيسية",
+        "products": "الأصناف والتسعير",
+        "parties": "الموزعون والعملاء",
+        "distribution": "الصرف والتحصيل",
+        "inventory": "المخزون والمواد الخام",
+        "production": "الإنتاج والعجنات",
+        "free_distribution": "التوزيع المجاني",
+        "handover": "الإقفال والتسليم",
+        "reports": "التقارير",
+        "finance": "الصندوق والحسابات",
+        "cash": "الصندوق والحسابات",
+        "expenses": "المصروفات",
+        "employees": "إدارة الموظفين",
+        "users": "إدارة المستخدمين والأدوار",
+        "settings": "إعدادات النظام",
+        "auth": "الدخول والحسابات",
+    }
+    grouped_permissions = {}
+    for permission in permissions:
+        group_key = permission.code.split(".", 1)[0]
+        grouped_permissions.setdefault(group_key, []).append(permission)
+
+    group_order = [key for key in group_names if key in grouped_permissions]
+    group_order.extend(sorted(key for key in grouped_permissions if key not in group_names))
+    permission_groups = [
+        {
+            "key": key,
+            "name": group_names.get(key, "صلاحيات أخرى"),
+            "permissions": grouped_permissions[key],
+        }
+        for key in group_order
+    ]
+
     return render_template(
         "staff/roles.html",
         roles=role_list,
         selected_role=selected_role,
         permissions=permissions,
+        permission_groups=permission_groups,
         selected_permission_codes=selected_permission_codes,
         role_form_error=role_form_error,
     )
