@@ -155,16 +155,17 @@
     });
   }
 
-  // Exiting the installed web app is separate from logging out. Keep the session intact.
+  // App exit is independent from logout. If the PWA host blocks window.close(),
+  // replace the current view with a blank page so the app UI is dismissed without logging out.
   const exitDialog = document.getElementById("exit-confirm-dialog");
   if (exitDialog) {
     const cancelExit = exitDialog.querySelector("[data-cancel-exit]");
     const confirmExit = exitDialog.querySelector("[data-confirm-exit]");
-    const exitMessage = exitDialog.querySelector("#exit-confirm-message");
 
     if (cancelExit) cancelExit.addEventListener("click", () => exitDialog.close());
     if (confirmExit) confirmExit.addEventListener("click", () => {
-      // Cordova-like shells expose a native exit API; ordinary browser/PWA windows do not.
+      exitDialog.close();
+
       try {
         if (window.navigator.app && typeof window.navigator.app.exitApp === "function") {
           window.navigator.app.exitApp();
@@ -173,11 +174,14 @@
       } catch (_) {}
 
       try { window.close(); } catch (_) {}
+
+      // The web platform has no universal PWA close API. Replace this view rather than
+      // displaying a repeated warning or logging the manager out.
       window.setTimeout(() => {
-        if (exitMessage && document.visibilityState !== "hidden") {
-          exitMessage.textContent = "لا يسمح المتصفح عادةً بإغلاق نافذة التطبيق تلقائيًا. أغلق نافذة التطبيق من الهاتف عند الحاجة؛ لن يتم تسجيل خروجك وستبقى جلستك محفوظة.";
+        if (document.visibilityState !== "hidden") {
+          window.location.replace("about:blank");
         }
-      }, 350);
+      }, 180);
     });
   }
 
