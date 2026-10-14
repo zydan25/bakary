@@ -13,7 +13,7 @@
   <link rel="manifest" href="{{ url_for('pwa_manifest') }}">
   <link rel="icon" type="{{ 'image/png' if pwa_app_icon_custom else 'image/svg+xml' }}" href="{{ pwa_app_icon_url }}">
   <link rel="apple-touch-icon" href="{{ pwa_app_icon_url }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-pwa-settings-v3') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-exit-menu-v1') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -36,6 +36,10 @@
           <strong>{{ current_user.full_name }}</strong>
           <small>{{ current_user.roles | map(attribute='name') | join('، ') or 'مستخدم' }}</small>
         </span>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-user-logout-form" data-app-logout>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="icon-button logout-trigger" aria-label="تسجيل الخروج" title="تسجيل الخروج">↪</button>
+        </form>
       </div>
 
       <nav class="tree-nav">
@@ -202,10 +206,7 @@
         </div>
         {% if current_user.is_authenticated %}
         <div class="topbar-actions">
-          <form method="post" action="{{ url_for('auth.logout') }}" data-app-logout>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="icon-button logout-trigger" aria-label="تسجيل الخروج">↪</button>
-          </form>
+          <button type="button" class="icon-button exit-trigger" data-open-dialog="exit-confirm-dialog" aria-label="الخروج من البرنامج" title="الخروج من البرنامج">⏻</button>
         </div>
         {% endif %}
       </header>
@@ -235,6 +236,15 @@
     </div>
   </div>
       {% if current_user.is_authenticated %}
+      <dialog class="app-confirm-dialog exit-confirm-dialog" id="exit-confirm-dialog" aria-labelledby="exit-confirm-title">
+        <div class="app-confirm-mark exit-confirm-mark">⏻</div>
+        <h2 id="exit-confirm-title">الخروج من البرنامج</h2>
+        <p id="exit-confirm-message">هل تريد إغلاق البرنامج؟ لن يتم تسجيل خروجك، وستبقى جلستك محفوظة.</p>
+        <div class="app-confirm-actions">
+          <button type="button" class="secondary-button" data-cancel-exit>البقاء في البرنامج</button>
+          <button type="button" class="danger-button" data-confirm-exit>نعم، خروج</button>
+        </div>
+      </dialog>
       <dialog class="app-confirm-dialog logout-confirm-dialog" id="logout-confirm-dialog" aria-labelledby="logout-confirm-title">
         <div class="app-confirm-mark">↪</div>
         <h2 id="logout-confirm-title">تسجيل الخروج</h2>
@@ -245,7 +255,7 @@
         </div>
       </dialog>
       {% endif %}
-  <script src="{{ url_for('static', filename='js/app.js', v='20261014-account-dashboard-v2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261014-exit-menu-v1') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
