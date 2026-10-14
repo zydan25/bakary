@@ -15,7 +15,7 @@
 <form class="search-toolbar" data-live-filter-target="#inventory-item-list" method="get" action="{{ url_for('inventory.index') }}">
   <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم المادة" aria-label="بحث فوري" autocomplete="off"></label>
   <input type="hidden" name="status" value="{{ status }}">
-  <button class="secondary-button" type="submit">بحث</button>
+  
 </form>
 <div class="filter-chips" role="group" aria-label="حالة المواد">
   <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('inventory.index', status='active', q=query or None) }}">النشطة</a>
