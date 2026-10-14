@@ -1,0 +1,101 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ product.name }} — تقرير الصنف{% endblock %}
+{% block page_heading %}{{ product.name }}{% endblock %}
+{% block content %}
+<section class="page-heading-row product-detail-heading">
+ <div>
+  <p class="eyebrow">تفاصيل الصنف</p>
+  <h1>{{ product.name }}</h1>
+  <p class="heading-subtitle">تقرير الأسعار وحركات الصرف والإنتاج والتوزيع المجاني.</p>
+ </div>
+ <div class="heading-actions product-detail-actions">
+  <a class="secondary-button" href="{{ url_for('products.index') }}">قائمة الأصناف</a>
+  {% if can_manage %}
+  <a class="primary-button" href="{{ url_for('products.edit', product_id=product.id) }}">تعديل الصنف والأسعار</a>
+  {% endif %}
+ </div>
+</section>
+
+<section class="content-card product-overview-card">
+ <div class="product-overview-main">
+  <span class="product-overview-icon" aria-hidden="true">♨</span>
+  <div>
+   <div class="product-status-row">
+    {% if product.is_default %}<span class="status-badge status-primary">الصنف الافتراضي</span>{% endif %}
+    <span class="status-badge {{ 'status-primary' if product.is_active else 'status-muted' }}">{{ 'نشط' if product.is_active else 'موقوف' }}</span>
+   </div>
+   <h2>{{ product.name }}</h2>
+   <p>الرمز: <strong>{{ product.code }}</strong> <span>·</span> وحدة البيع: <strong>{{ product.unit_label }}</strong></p>
+  </div>
+ </div>
+ <div class="product-overview-prices">
+  <div><small>سعر الموزع العام</small><strong>{{ "{:,.2f}".format(product.default_distributor_price) }} <small>ريال</small></strong></div>
+  <div><small>سعر العميل العام</small><strong>{{ "{:,.2f}".format(product.default_customer_price) }} <small>ريال</small></strong></div>
+  <div><small>سعر بيع المحل</small><strong>{{ "{:,.2f}".format(product.shop_price) }} <small>ريال</small></strong></div>
+ </div>
+</section>
+
+<section class="product-metrics-grid" aria-label="ملخص الصنف">
+ <article class="product-metric"><span class="product-metric-icon">↗</span><small>الصرف للحسابات</small><strong>{{ "{:,.3f}".format(issued_quantity) }}</strong><span>{{ issue_count }} عملية · {{ "{:,.2f}".format(issued_amount) }} ريال</span></article>
+ <article class="product-metric"><span class="product-metric-icon">♙</span><small>الحسابات التي استلمت الصنف</small><strong>{{ party_count }}</strong><span>موزعون وعملاء</span></article>
+ <article class="product-metric"><span class="product-metric-icon">♡</span><small>التوزيع المجاني</small><strong>{{ "{:,.3f}".format(free_quantity) }}</strong><span>{{ free_count }} عملية مجانية</span></article>
+ <article class="product-metric"><span class="product-metric-icon">♨</span><small>الإنتاج المسجل</small><strong>{{ "{:,.3f}".format(produced_quantity) }}</strong><span>{{ production_count }} عجنة</span></article>
+ <article class="product-metric"><span class="product-metric-icon">▣</span><small>بيع المحل المسجل</small><strong>{{ "{:,.3f}".format(shop_sale_quantity) }}</strong><span>{{ "{:,.2f}".format(shop_sale_amount) }} ريال متوقع</span></article>
+</section>
+
+<section class="content-card product-prices-report">
+ <div class="section-title"><div><h2>الأسعار الخاصة بالحسابات</h2><p>الأسعار الحالية للصنف لدى الموزعين والعملاء النشطين.</p></div><span class="status-badge status-muted">{{ price_rows|length }} حساب</span></div>
+ {% if price_rows %}
+ <div class="product-price-report-list">
+  {% for row in price_rows %}
+  <div class="product-price-report-row">
+   <div><strong>{{ row.party.name }}</strong><small>{{ 'موزع' if row.party.party_type == 'distributor' else 'عميل' }} · {{ 'سعر خاص' if row.is_custom else 'السعر العام' }}</small></div>
+   <strong>{{ "{:,.2f}".format(row.unit_price) }} ريال</strong>
+  </div>
+  {% endfor %}
+ </div>
+ {% else %}
+ <div class="empty-state"><h2>لا توجد حسابات نشطة مرتبطة بهذا الصنف</h2><p>ستظهر الأسعار هنا عند إضافة موزع أو عميل.</p></div>
+ {% endif %}
+</section>
+
+<section class="product-history-grid">
+ <section class="content-card">
+  <div class="section-title"><div><h2>آخر حركات الصرف</h2><p>السعر والإجمالي المحفوظان وقت العملية.</p></div></div>
+  {% for row in recent_issues %}
+  <div class="product-history-row">
+   <div><strong>{{ row.party.name }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.quantity }} {{ product.unit_label }}</small></div>
+   <strong>{{ "{:,.2f}".format(row.total_amount) }} ريال</strong>
+  </div>
+  {% else %}<p class="product-muted-empty">لا توجد حركات صرف مسجلة لهذا الصنف.</p>{% endfor %}
+ </section>
+ <section class="content-card">
+  <div class="section-title"><div><h2>آخر سجلات الإنتاج</h2><p>الكميات المسجلة في العجنات.</p></div></div>
+  {% for row in recent_production %}
+  <div class="product-history-row">
+   <div><strong>{{ row.period.business_date.isoformat() }} · {{ row.period.period_code }}</strong><small>{{ row.created_at.strftime('%Y-%m-%d %H:%M') if row.created_at else '' }}</small></div>
+   <strong>{{ "{:,.3f}".format(row.produced_quantity) }} {{ product.unit_label }}</strong>
+  </div>
+  {% else %}<p class="product-muted-empty">لا توجد عجنات مسجلة لهذا الصنف.</p>{% endfor %}
+ </section>
+ <section class="content-card">
+  <div class="section-title"><div><h2>آخر التوزيعات المجانية</h2></div></div>
+  {% for row in recent_free %}
+  <div class="product-history-row">
+   <div><strong>{{ row.recipient.name }}</strong><small>{{ row.period.business_date.isoformat() }} · {{ row.period.period_code }}</small></div>
+   <strong>{{ "{:,.3f}".format(row.quantity) }} {{ product.unit_label }}</strong>
+  </div>
+  {% else %}<p class="product-muted-empty">لا توجد توزيعات مجانية لهذا الصنف.</p>{% endfor %}
+ </section>
+</section>
+
+{% if can_manage %}
+<section class="content-card product-danger-zone">
+ <div><strong>حذف الصنف</strong><p>لا يسمح النظام بحذف صنف مرتبط بحركات صرف أو إنتاج أو إقفالات سابقة؛ في هذه الحالة أوقفه للحفاظ على السجلات المالية.</p></div>
+ <form method="post" action="{{ url_for('products.delete', product_id=product.id) }}" data-confirm="هل تريد حذف هذا الصنف نهائيًا؟ لا يمكن التراجع عن الحذف.">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="danger-button">حذف الصنف نهائيًا</button>
+ </form>
+</section>
+{% endif %}
+{% endblock %}
