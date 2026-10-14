@@ -1,5 +1,7 @@
 """Free distribution recipients and daily/period issue records."""
 
+from decimal import Decimal
+
 from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
@@ -13,8 +15,12 @@ class FreeRecipient(TimestampMixin, db.Model):
     id = db.Column(Integer, primary_key=True)
     name = db.Column(String(160), nullable=False, index=True)
     notes = db.Column(Text, nullable=True)
+    default_product_id = db.Column(Integer, ForeignKey("products.id", ondelete="RESTRICT"), nullable=True, index=True)
+    daily_quantity = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
     created_by_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    default_product = relationship("Product", foreign_keys=[default_product_id])
 
 
 class FreeDistribution(TimestampMixin, db.Model):
