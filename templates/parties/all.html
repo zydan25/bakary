@@ -2,7 +2,7 @@
 {% block title %}الموزعون والعملاء{% endblock %}
 {% block page_heading %}الموزعون والعملاء{% endblock %}
 {% block content %}
-<section class="page-heading-row">
+<section class="page-heading-row party-page-heading">
  <div><p class="eyebrow">إدارة الحسابات</p><h1>الموزعون والعملاء</h1></div>
  <div class="heading-actions">
   {% if current_user.has_permission('distribution.issue') %}<a class="secondary-button" href="{{ url_for('distribution.issue', party_type='all') }}">صرف عام</a>{% endif %}
