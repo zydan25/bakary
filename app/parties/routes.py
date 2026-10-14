@@ -12,7 +12,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func, select
 
 from app.extensions import db
-from app.models.distribution import PartyLedgerEntry
+from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
 from app.models.party import Party
 from app.models.product import Product
 from app.parties import parties_bp
@@ -299,3 +299,44 @@ def _is_active(party_id, party_type):
     if record is None:
         raise PartyRuleError("لم يتم العثور على الحساب.")
     return record.is_active
+
+
+@parties_bp.get("/profile/<party_type>/<int:party_id>")
+@login_required
+def party_detail(party_type, party_id):
+    if not _can_view_parties():
+        abort(403)
+    if party_type not in {"distributor", "customer"}:
+        abort(404)
+    party = db.session.scalar(select(Party).where(
+        Party.id == party_id,
+        Party.party_type == party_type,
+    ))
+    if party is None:
+        abort(404)
+    issue_rows = db.session.scalars(
+        select(DistributionIssue).where(DistributionIssue.party_id == party.id)
+        .order_by(DistributionIssue.business_date.desc(), DistributionIssue.created_at.desc(), DistributionIssue.id.desc())
+        .limit(50)
+    ).all()
+    payment_rows = db.session.scalars(
+        select(PartyPayment).where(PartyPayment.party_id == party.id)
+        .order_by(PartyPayment.business_date.desc(), PartyPayment.created_at.desc(), PartyPayment.id.desc())
+        .limit(50)
+    ).all()
+    ledger_entries = db.session.scalars(
+        select(PartyLedgerEntry).where(PartyLedgerEntry.party_id == party.id)
+    ).all()
+    balance = sum(
+        (Decimal(str(row.debit_amount or 0)) - Decimal(str(row.credit_amount or 0)) for row in ledger_entries),
+        Decimal("0.00"),
+    )
+    return render_template(
+        "parties/detail.html",
+        party=party,
+        party_type=party_type,
+        balance=balance,
+        issue_rows=issue_rows,
+        payment_rows=payment_rows,
+        can_manage=current_user.has_permission("parties.manage"),
+    )
