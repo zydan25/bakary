@@ -9,7 +9,7 @@ from app.models.finance import CashAccount, CashMovement
 from app.models.free_distribution import FreeDistribution, FreeRecipient
 from app.models.inventory import InventoryItem, InventoryMovement
 from app.models.party import Party, PartyPrice
-from app.models.producection import BusinessPeriod, DoughBatch, PeriodIngredientUsage
+from app.models.production import BusinessPeriod, DoughBatch, PeriodIngredientUsage
 from app.models.product import Product
 from app.models.role import Permission, Role
 from app.models.setting import Setting
