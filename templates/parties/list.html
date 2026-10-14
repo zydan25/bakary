@@ -44,7 +44,7 @@
     <div class="entity-top">
       <div class="entity-avatar">{{ '♙' if party_type == 'distributor' else '♧' }}</div>
       <div class="entity-main">
-        <h2>{{ item.name }}</h2>
+        <h2><a class="entity-title-link" href="{{ url_for('parties.party_detail',party_type=party_type,party_id=item.id) }}">{{ item.name }}</a></h2>
         <p>{% if item.phone %}{{ item.phone }}{% else %}لا يوجد رقم هاتف{% endif %}</p>
       </div>
       {% if not item.is_active %}<span class="status-badge status-muted">موقوف</span>{% else %}<span class="status-badge status-primary">نشط</span>{% endif %}
