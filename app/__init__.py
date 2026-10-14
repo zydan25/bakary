@@ -54,6 +54,7 @@ def create_app(config_name=None, test_config=None):
     from app.distribution import distribution_bp
     from app.inventory import inventory_bp
     from app.production import production_bp
+    from app.staff import staff_bp
     from app.cli import register_cli
 
     @login_manager.user_loader
@@ -71,6 +72,7 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(distribution_bp)
     app.register_blueprint(inventory_bp)
     app.register_blueprint(production_bp)
+    app.register_blueprint(staff_bp)
     register_cli(app)
 
     @app.before_request
