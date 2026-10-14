@@ -53,12 +53,16 @@ class DoughBatch(TimestampMixin, db.Model):
     )
     produced_quantity = db.Column(Numeric(14, 3), nullable=False)
     flour_quantity = db.Column(Numeric(14, 3), nullable=True)
+    flour_item_id = db.Column(
+        Integer, ForeignKey("inventory_items.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     statement = db.Column(Text, nullable=True)
     idempotency_key = db.Column(String(64), nullable=False)
     created_by_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
 
     period = relationship("BusinessPeriod", back_populates="batches")
     product = relationship("Product")
+    flour_item = relationship("InventoryItem")
     created_by = relationship("User")
 
 
