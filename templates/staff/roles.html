@@ -1,0 +1,44 @@
+{% extends "layouts/base.html" %}
+{% block title %}الأدوار والصلاحيات{% endblock %}
+{% block page_heading %}الأدوار والصلاحيات{% endblock %}
+{% block content %}
+<section class="page-heading-row"><div><p class="eyebrow">إدارة الوصول</p><h1>الأدوار والصلاحيات</h1><p class="heading-subtitle">حدد صلاحيات كل دور؛ تُطبق الحماية على المسارات في الخادم أيضًا.</p></div><a class="secondary-button" href="{{ url_for('staff.employees') }}">الموظفون</a></section>
+
+<section class="content-card">
+ <div class="section-title"><div><h2>الأدوار الحالية</h2><p>اختر دورًا لمراجعة صلاحياته وتعديلها.</p></div></div>
+ <div class="role-selector-list">
+ {% for role in roles %}
+ <a class="role-selector {% if selected_role and role.id == selected_role.id %}is-selected{% endif %}" href="{{ url_for('staff.roles',role_id=role.id) }}"><strong>{{ role.name }}</strong><small>{{ role.description or role.code }}</small></a>
+ {% else %}<div class="empty-state"><h2>لا توجد أدوار</h2><p>أنشئ دورًا جديدًا أو نفّذ seed-roles لإعداد الأدوار الأساسية.</p></div>{% endfor %}
+ </div>
+</section>
+
+{% if selected_role %}
+<section class="content-card">
+ <div class="section-title"><div><h2>صلاحيات: {{ selected_role.name }}</h2><p>حدد ما يستطيع صاحب هذا الدور عرضه وتنفيذه.</p></div></div>
+ <form method="post" action="{{ url_for('staff.roles',role_id=selected_role.id) }}" class="form-stack">
+  <input type="hidden" name="action" value="save_permissions"><input type="hidden" name="role_id" value="{{ selected_role.id }}">
+  <div class="permission-grid">
+   {% for permission in permissions %}
+   <label class="permission-check-item"><input type="checkbox" name="permission_codes" value="{{ permission.code }}" {% if permission.code in selected_permission_codes %}checked{% endif %}><span><strong>{{ permission.name }}</strong><small>{{ permission.description or permission.code }}</small><code>{{ permission.code }}</code></span></label>
+   {% endfor %}
+  </div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ حفظ الصلاحيات...">حفظ الصلاحيات</button></div>
+ </form>
+</section>
+{% endif %}
+
+<section class="content-card">
+ <div class="section-title"><div><h2>إنشاء دور جديد</h2><p>استخدم رمزًا داخليًا لاتينيًا بسيطًا، مثل supervisor أو cashier.</p></div></div>
+ <form method="post" action="{{ url_for('staff.roles') }}" class="form-stack">
+  <input type="hidden" name="action" value="create_role">
+  <div class="form-row">
+   <div class="form-field"><label class="field-label" for="role-name">اسم الدور بالعربية</label><input class="form-control" id="role-name" name="role_name" value="{{ request.form.get('role_name','') }}" required></div>
+   <div class="form-field"><label class="field-label" for="role-code">الرمز الداخلي</label><input class="form-control" id="role-code" name="role_code" value="{{ request.form.get('role_code','') }}" placeholder="cashier" dir="ltr" pattern="[a-z][a-z0-9_]{1,79}" required></div>
+  </div>
+  <div class="form-field"><label class="field-label" for="role-description">وصف الدور</label><textarea class="form-control" id="role-description" name="role_description" rows="2">{{ request.form.get('role_description','') }}</textarea></div>
+  {% if role_form_error %}<small class="field-error">{{ role_form_error }}</small>{% endif %}
+  <button class="primary-button" type="submit" data-loading-label="جارٍ إنشاء الدور...">إنشاء الدور</button>
+ </form>
+</section>
+{% endblock %}
