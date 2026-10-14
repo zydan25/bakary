@@ -52,10 +52,7 @@
   <form method="post" class="form-stack">
     {{ form.hidden_tag() }}
     <div class="form-field">{{ form.name.label(class_="field-label") }}{{ form.name(class_="form-control", placeholder="مثال: روتي") }}{% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="form-row">
-      <div class="form-field">{{ form.code.label(class_="field-label") }}{{ form.code(class_="form-control", placeholder="ROTI", dir="ltr") }}{% for error in form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-      <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="حبة") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    </div>
+    <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="حبة") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
     <div class="form-field">{{ form.default_distributor_price.label(class_="field-label") }}{{ form.default_distributor_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.default_distributor_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
     <div class="form-field">{{ form.default_customer_price.label(class_="field-label") }}{{ form.default_customer_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.default_customer_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
     <div class="form-field">{{ form.shop_price.label(class_="field-label") }}{{ form.shop_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.shop_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
