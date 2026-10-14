@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+{% block title %}المخزون والمواد الخام{% endblock %}
+{% block page_heading %}المخزون{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div><p class="eyebrow">المخزون</p><h1>المواد الخام</h1><p class="heading-subtitle">الأرصدة تُحسب من سجل حركات المخزون، ولا تُعدّل مباشرة.</p></div>
+  {% if can_manage %}<div class="heading-actions"><a class="secondary-button" href="{{ url_for('inventory.stock', kind='opening_balance') }}">رصيد افتتاحي</a><a class="primary-button" href="{{ url_for('inventory.index', action='new', status=status) }}">＋ إضافة مادة</a></div>{% endif %}
+</section>
+
+<section class="content-card stock-overview">
+  <div class="section-title"><div><h2>نظرة عامة</h2><p>المواد الظاهرة حسب مرشح العرض.</p></div></div>
+  <div class="report-totals-grid"><div><small>عدد المواد</small><strong>{{ items|length }}</strong></div><div><small>منخفضة المخزون</small><strong>{{ items|selectattr('is_active')|list|length and items|selectattr('is_active')|list|length or 0 }}</strong></div><div><small>حالة التتبع</small><strong>دفتر حركات</strong></div></div>
+</section>
+
+<form class="search-toolbar" data-live-filter-target="#inventory-item-list" method="get" action="{{ url_for('inventory.index') }}">
+  <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم المادة أو رمزها" aria-label="بحث فوري" autocomplete="off"></label>
+  <input type="hidden" name="status" value="{{ status }}">
+  <button class="secondary-button" type="submit">بحث</button>
+</form>
+<div class="filter-chips" role="group" aria-label="حالة المواد">
+  <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('inventory.index', status='active', q=query or None) }}">النشطة</a>
+  <a class="filter-chip {% if status == 'inactive' %}is-selected{% endif %}" href="{{ url_for('inventory.index', status='inactive', q=query or None) }}">الموقوفة</a>
+  <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for('inventory.index', status='all', q=query or None) }}">الكل</a>
+</div>
+
+<section class="entity-list" id="inventory-item-list">
+  {% for item in items %}
+  {% set balance = balances.get(item.id, 0) %}
+  {% set low = item.is_active and balance <= item.reorder_level %}
+  <article class="entity-card" data-searchable-card data-search-text="{{ item.name }} {{ item.code }}">
+    <div class="entity-top">
+      <div class="entity-avatar">{{ '!' if low else '▤' }}</div>
+      <div class="entity-main"><h2>{{ item.name }}</h2><p>الرمز: <b>{{ item.code }}</b> · الوحدة: {{ item.unit_label }}</p></div>
+      {% if not item.is_active %}<span class="status-badge status-muted">موقوفة</span>{% elif low %}<span class="status-badge status-warning">مخزون منخفض</span>{% else %}<span class="status-badge status-primary">متاحة</span>{% endif %}
+    </div>
+    <div class="stock-balance-panel">
+      <small>الرصيد الحالي</small>
+      <strong class="{% if low %}summary-red{% else %}stock-value{% endif %}">{{ "{:,.3f}".format(balance) }} <small>{{ item.unit_label }}</small></strong>
+    </div>
+    <div class="entity-extra-line"><span>حد التنبيه</span><strong>{{ "{:,.3f}".format(item.reorder_level) }} {{ item.unit_label }}</strong></div>
+    {% if can_manage and item.is_active %}
+    <div class="entity-actions"><a class="primary-button" href="{{ url_for('inventory.stock', item_id=item.id, kind='addition') }}">＋ إضافة مخزون</a><a class="secondary-button" href="{{ url_for('inventory.movements', item_id=item.id) }}">حركة المادة</a></div>
+    {% elif current_user.has_permission('inventory.view') %}
+    <div class="entity-actions"><a class="secondary-button" href="{{ url_for('inventory.movements', item_id=item.id) }}">حركة المادة</a></div>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><div class="empty-symbol">▤</div><h2>لا توجد مواد خام هنا</h2><p>ابدأ بإضافة الدقيق أو الزيت أو الملح ثم أدخل رصيدها الافتتاحي.</p></div>
+  {% endfor %}
+</section>
+
+<dialog class="form-dialog" id="inventory-item-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}">
+  <div class="dialog-header"><div><p class="eyebrow">بيانات المخزون</p><h2>إضافة مادة خام</h2></div><a class="dialog-close" href="{{ url_for('inventory.index', status=status) }}" aria-label="إغلاق">×</a></div>
+  <form method="post" class="form-stack">
+    {{ form.hidden_tag() }}
+    <div class="form-field">{{ form.name.label(class_="field-label") }}{{ form.name(class_="form-control", placeholder="مثل: دقيق شتاء") }}{% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-row">
+      <div class="form-field">{{ form.code.label(class_="field-label") }}{{ form.code(class_="form-control", placeholder="FLOUR", dir="ltr") }}{% for error in form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+      <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="كجم") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    </div>
+    <div class="form-field">{{ form.reorder_level.label(class_="field-label") }}{{ form.reorder_level(class_="form-control", inputmode="decimal", **{'data-quantity-words':'true','data-unit':form.unit_label.data or 'كجم'}) }}{% for error in form.reorder_level.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ الحفظ...">حفظ المادة</button><a class="secondary-button" href="{{ url_for('inventory.index', status=status) }}">إلغاء</a></div>
+  </form>
+</dialog>
+{% endblock %}
