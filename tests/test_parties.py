@@ -48,6 +48,23 @@ def log_in(client):
     assert response.status_code == 200
 
 
+def test_homepage_and_combined_parties_directory_use_distinct_routes():
+    app = make_app_with_owner()
+    try:
+        client = app.test_client()
+        log_in(client)
+
+        home = client.get("/")
+        assert home.status_code == 302
+        assert home.headers["Location"].endswith("/dashboard/")
+
+        directory = client.get("/parties/")
+        assert directory.status_code == 200
+        assert "الموزعون والعملاء" in directory.get_data(as_text=True)
+    finally:
+        teardown_database(app)
+
+
 def test_distributor_creation_saves_party_specific_price():
     app = make_app_with_owner()
     try:
