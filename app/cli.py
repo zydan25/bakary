@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models.user import User
+from app.models.role import Role
 from app.services.access_control import seed_default_roles
 from app.services.phone import normalize_phone
 
@@ -38,20 +39,10 @@ def register_cli(app):
         if existing is not None:
             raise click.ClickException("يوجد حساب مسجل بهذا الرقم بالفعل.")
 
-        owner = db.session.scalar(
-            select(__import__("app.models.role", fromlist=["Role"]).Role)
-            .where(
-                __import__("app.models.role", fromlist=["Role"]).Role.code == "owner"
-            )
-        )
+        owner = db.session.scalar(select(Role).where(Role.code == "owner"))
         if owner is None:
             seed_default_roles()
-            owner = db.session.scalar(
-                select(__import__("app.models.role", fromlist=["Role"]).Role)
-                .where(
-                    __import__("app.models.role", fromlist=["Role"]).Role.code == "owner"
-                )
-            )
+            owner = db.session.scalar(select(Role).where(Role.code == "owner"))
 
         user = User(full_name=name.strip(), phone=normalized_phone, is_active=True)
         try:
