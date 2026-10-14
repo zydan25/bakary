@@ -7,11 +7,13 @@ from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.closing import PeriodCloseProduct, PeriodHandover
+from app.models.closing import PeriodCloseProduct, PeriodHandover, PeriodRawMaterialClose
 from app.models.distribution import DistributionIssue
 from app.models.employee import Employee
 from app.models.expense import Expense
 from app.models.finance import CashAccount, CashMovement
+from app.models.inventory import InventoryItem, InventoryMovement
+from app.services.inventory import inventory_balance
 from app.models.free_distribution import FreeDistribution
 from app.models.party import Party
 from app.models.production import BusinessPeriod, DoughBatch
@@ -132,6 +134,159 @@ def preview_period_close(period):
     return rows
 
 
+def _material_previous_closes(period):
+    """Return each material's ending count from the nearest earlier closed period."""
+    earlier = BusinessPeriod.business_date < period.business_date
+    if period.period_code == "evening":
+        earlier = or_(
+            earlier,
+            and_(
+                BusinessPeriod.business_date == period.business_date,
+                BusinessPeriod.period_code == "morning",
+            ),
+        )
+    pairs = db.session.execute(
+        select(PeriodRawMaterialClose, BusinessPeriod)
+        .join(BusinessPeriod, PeriodRawMaterialClose.period_id == BusinessPeriod.id)
+        .where(earlier, BusinessPeriod.status == "closed")
+    ).all()
+    priorities = {"morning": 0, "daily": 1, "evening": 2}
+    result = {}
+    for close_row, previous_period in pairs:
+        key = (
+            previous_period.business_date,
+            priorities.get(previous_period.period_code, 0),
+            previous_period.id,
+        )
+        existing = result.get(close_row.item_id)
+        if existing is None or key > existing["key"]:
+            result[close_row.item_id] = {
+                "key": key,
+                "row": close_row,
+                "period": previous_period,
+            }
+    return result
+
+
+def _ledger_balance_before_date(item_id, selected_date):
+    movements = db.session.scalars(
+        select(InventoryMovement).where(
+            InventoryMovement.item_id == item_id,
+            InventoryMovement.business_date < selected_date,
+        )
+    ).all()
+    inbound = sum(
+        (Decimal(str(row.quantity)) for row in movements if row.direction == "in"),
+        Decimal("0.000"),
+    )
+    outbound = sum(
+        (Decimal(str(row.quantity)) for row in movements if row.direction == "out"),
+        Decimal("0.000"),
+    )
+    return (inbound - outbound).quantize(QTY)
+
+
+def preview_raw_material_balances(period):
+    """Calculate opening and incoming quantities for the period without writing anything."""
+    items = db.session.scalars(
+        select(InventoryItem).where(InventoryItem.is_active.is_(True)).order_by(InventoryItem.name.asc())
+    ).all()
+    previous_closes = _material_previous_closes(period)
+    result = []
+    for item in items:
+        previous = previous_closes.get(item.id)
+        if previous:
+            opening = Decimal(str(previous["row"].ending_quantity))
+            cutoff = previous["period"].closed_at
+        else:
+            opening = _ledger_balance_before_date(item.id, period.business_date)
+            cutoff = None
+
+        statement = select(InventoryMovement).where(
+            InventoryMovement.item_id == item.id,
+            InventoryMovement.business_date <= period.business_date,
+        )
+        if cutoff is None:
+            statement = statement.where(InventoryMovement.business_date == period.business_date)
+        else:
+            statement = statement.where(InventoryMovement.created_at > cutoff)
+        movements = db.session.scalars(statement.order_by(InventoryMovement.created_at.asc(), InventoryMovement.id.asc())).all()
+
+        incoming = sum(
+            (Decimal(str(row.quantity)) for row in movements if row.direction == "in"),
+            Decimal("0.000"),
+        ).quantize(QTY)
+        other_outgoing = sum(
+            (
+                Decimal(str(row.quantity))
+                for row in movements
+                if row.direction == "out" and row.movement_type != "production_consumption"
+            ),
+            Decimal("0.000"),
+        ).quantize(QTY)
+        previously_recorded = sum(
+            (
+                Decimal(str(row.quantity))
+                for row in movements
+                if row.direction == "out" and row.movement_type == "production_consumption"
+            ),
+            Decimal("0.000"),
+        ).quantize(QTY)
+        available = (opening + incoming - other_outgoing).quantize(QTY)
+        if available < 0:
+            raise ClosingRuleError(
+                f"حساب المادة «{item.name}» أصبح سالبًا حسب سجل الحركات؛ راجع حركات المخزون قبل الإقفال."
+            )
+        result.append({
+            "item": item,
+            "item_id": item.id,
+            "opening_quantity": opening.quantize(QTY),
+            "incoming_quantity": incoming,
+            "other_outgoing_quantity": other_outgoing,
+            "available_quantity": available,
+            "previously_recorded_consumption": previously_recorded,
+            "ending_quantity": None,
+            "calculated_consumption": None,
+            "new_consumption": None,
+        })
+    return result
+
+
+def calculate_raw_material_close_rows(period, ending_quantities=None):
+    """Infer total material usage from the recorded opening, inflows, other issues and physical end count."""
+    ending_quantities = ending_quantities or {}
+    rows = preview_raw_material_balances(period)
+    for row in rows:
+        item_id = row["item_id"]
+        raw_ending = ending_quantities.get(item_id, ending_quantities.get(str(item_id)))
+        if raw_ending in (None, ""):
+            raise ClosingRuleError(f"أدخل الكمية الموجودة فعليًا من مادة «{row['item'].name}».")
+        ending = _decimal(raw_ending, f"المتبقي من مادة {row['item'].name}", QTY)
+        available = row["available_quantity"]
+        if ending > available:
+            raise ClosingRuleError(
+                f"المتبقي من مادة «{row['item'].name}» ({ending}) يتجاوز المتاح المحسوب ({available} {row['item'].unit_label})."
+            )
+        consumed = (available - ending).quantize(QTY)
+        already_recorded = row["previously_recorded_consumption"]
+        if consumed < already_recorded:
+            raise ClosingRuleError(
+                f"الاستهلاك المسجل سابقًا لمادة «{row['item'].name}» ({already_recorded}) أكبر من الاستهلاك المحسوب من الجرد ({consumed}); راجع الحركات قبل اعتماد الإقفال."
+            )
+        row["ending_quantity"] = ending
+        row["calculated_consumption"] = consumed
+        row["new_consumption"] = (consumed - already_recorded).quantize(QTY)
+    return rows
+
+
+def get_closed_raw_material_summary(period):
+    return db.session.scalars(
+        select(PeriodRawMaterialClose)
+        .where(PeriodRawMaterialClose.period_id == period.id)
+        .order_by(PeriodRawMaterialClose.item_id.asc())
+    ).all()
+
+
 def calculate_close_rows(period, damaged_quantities=None, carried_quantities=None):
     damaged_quantities = damaged_quantities or {}
     carried_quantities = carried_quantities or {}
@@ -178,6 +333,7 @@ def close_period_with_handover(
     handed_to_cash_amount,
     damaged_quantities,
     carried_quantities,
+    raw_material_endings=None,
     statement=None,
     actor_id=None,
 ):
@@ -207,6 +363,7 @@ def close_period_with_handover(
         )
 
     rows, expected = calculate_close_rows(period, damaged_quantities, carried_quantities)
+    material_rows = calculate_raw_material_close_rows(period, raw_material_endings or {})
     account = db.session.scalar(
         select(CashAccount)
         .where(CashAccount.is_main.is_(True), CashAccount.is_active.is_(True))
@@ -247,6 +404,36 @@ def close_period_with_handover(
                 expected_shop_sales=row["expected_shop_sales"],
                 created_by_id=actor_id,
             ))
+
+        for row in material_rows:
+            db.session.add(PeriodRawMaterialClose(
+                period_id=period.id,
+                item_id=row["item_id"],
+                opening_quantity=row["opening_quantity"],
+                incoming_quantity=row["incoming_quantity"],
+                other_outgoing_quantity=row["other_outgoing_quantity"],
+                calculated_consumption=row["calculated_consumption"],
+                previously_recorded_consumption=row["previously_recorded_consumption"],
+                ending_quantity=row["ending_quantity"],
+                created_by_id=actor_id,
+            ))
+            new_consumption = row["new_consumption"]
+            if new_consumption > 0:
+                if inventory_balance(row["item_id"]) < new_consumption:
+                    raise ClosingRuleError(
+                        f"الرصيد الحالي من مادة «{row['item'].name}» لا يكفي لترحيل الاستهلاك المحسوب. راجع حركات المخزون."
+                    )
+                db.session.add(InventoryMovement(
+                    item_id=row["item_id"],
+                    movement_type="production_consumption",
+                    direction="out",
+                    quantity=new_consumption,
+                    business_date=period.business_date,
+                    source_type="period_raw_material_close",
+                    source_id=period.id,
+                    statement=f"استهلاك محسوب عند إقفال الفترة {period.business_date.isoformat()} — {period.period_code}",
+                    created_by_id=actor_id,
+                ))
         handover = PeriodHandover(
             period_id=period.id,
             receiver_employee_id=employee.id,
