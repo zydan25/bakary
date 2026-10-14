@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
-from wtforms import DateField, DecimalField, SelectField, StringField, TextAreaField
+from wtforms import DateField, DecimalField, HiddenField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, Regexp
 
 
@@ -26,6 +26,7 @@ class CashAccountForm(FlaskForm):
 
 
 class ExpenseForm(FlaskForm):
+    request_key = HiddenField(validators=[DataRequired(message="أعد فتح النموذج وحاول مجددًا.")])
     title = StringField("اسم المصروف", validators=[DataRequired(message="اسم المصروف مطلوب."), Length(max=160)])
     amount = DecimalField(
         "المبلغ",
@@ -41,6 +42,7 @@ class ExpenseForm(FlaskForm):
 
 
 class TransferForm(FlaskForm):
+    request_key = HiddenField(validators=[DataRequired(message="أعد فتح النموذج وحاول مجددًا.")])
     source_account_id = SelectField("من حساب", coerce=int, validators=[DataRequired(message="اختر حساب المصدر.")])
     target_account_id = SelectField("إلى حساب", coerce=int, validators=[DataRequired(message="اختر حساب الوجهة.")])
     amount = DecimalField(
