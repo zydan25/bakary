@@ -15,6 +15,7 @@ htmlcov/
 
 # Flask runtime
 instance/
+app/instance/
 *.log
 uploads/
 storage/
