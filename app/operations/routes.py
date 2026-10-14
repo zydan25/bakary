@@ -70,7 +70,7 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
     ).all()
     open_periods = selectable_open_periods(actor_id=current_user.id)
-    requested_period_id = request.args.get("period_id", type=int)
+    requested_period_id = request.args.get("period_id", type=int) or request.form.get("period_id", type=int)
     period = db.session.get(BusinessPeriod, requested_period_id) if requested_period_id else db.session.scalar(
         select(BusinessPeriod).where(
             BusinessPeriod.business_date == selected_date,
