@@ -66,7 +66,6 @@ def test_close_calculates_sales_and_records_handover_expense_and_cash():
                 produced_quantity="100",
                 business_date=date.today(),
                 period_code="daily",
-                flour_mode="none",
                 actor_id=actor_id,
                 statement="إنتاج تجريبي",
                 idempotency_key="close-test-dough-001",
