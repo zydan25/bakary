@@ -79,3 +79,36 @@ def test_settings_page_requires_login():
         assert app.test_client().get("/settings/").status_code == 302
     finally:
         cleanup(app)
+
+
+def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
+    app, _ids = setup()
+    try:
+        client = app.test_client()
+        login(client)
+
+        settings_page = client.get("/settings/")
+        assert settings_page.status_code == 200
+        assert "أزرار الإجراءات السريعة" in settings_page.get_data(as_text=True)
+        assert 'name="quick_actions"' in settings_page.get_data(as_text=True)
+
+        response = client.post("/settings/", data={
+            "action": "save_quick_actions",
+            "quick_actions": ["products", "account"],
+        }, follow_redirects=True)
+        assert response.status_code == 200
+
+        with app.app_context():
+            saved = db.session.scalar(
+                select(Setting).where(Setting.key == "dashboard_quick_actions")
+            )
+            assert saved is not None
+            assert saved.value == ["products", "account"]
+
+        dashboard = client.get("/dashboard/")
+        assert dashboard.status_code == 200
+        html = dashboard.get_data(as_text=True)
+        assert "إجراءات سريعة" in html
+        assert "تسجيل عجنة" not in html
+    finally:
+        cleanup(app)
