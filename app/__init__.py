@@ -1,6 +1,7 @@
 """Flask application factory."""
 
 import os
+from pathlib import Path
 
 from flask import Flask, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user
@@ -15,7 +16,14 @@ def create_app(config_name=None, test_config=None):
     if name not in config_by_name:
         raise ValueError(f"Unknown FLASK_CONFIG: {name}")
 
-    app = Flask(__name__, instance_relative_config=True)
+    project_root = Path(__file__).resolve().parent.parent
+    app = Flask(
+        __name__,
+        instance_path=str(project_root / "instance"),
+        instance_relative_config=True,
+        template_folder=str(project_root / "templates"),
+        static_folder="static",
+    )
     app.config.from_object(config_by_name[name])
     if test_config:
         app.config.update(test_config)
@@ -85,7 +93,7 @@ def create_app(config_name=None, test_config=None):
     def home():
         if current_user.is_authenticated:
             return redirect(url_for("dashboard.index"))
-        return render_template("landing.html")
+        return redirect(url_for("auth.login"))
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(_error):
