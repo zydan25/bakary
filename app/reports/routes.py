@@ -18,6 +18,7 @@ from app.models.party import Party
 from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
 from app.reports import reports_bp
+from app.services.finance import cash_account_balance
 from app.services.inventory import inventory_balance
 
 
@@ -39,7 +40,7 @@ def _has_any(*permissions):
 @reports_bp.get("/")
 @login_required
 def index():
-    can_distribution = _has_any("distribution.reports", "distribution.issue", "distribution.payment")
+    can_distribution = current_user.has_permission("distribution.reports")
     can_production = _has_any("production.view", "production.manage", "handover.manage")
     can_free = current_user.has_permission("free_distribution.manage")
     can_inventory = _has_any("inventory.view", "inventory.manage")
@@ -48,7 +49,7 @@ def index():
     if not (
         current_user.has_permission("reports.view")
         or current_user.has_permission("reports.export")
-        or can_distribution or can_production or can_free or can_inventory or can_finance or can_party
+        or can_distribution or can_production or can_free or can_inventory or can_finance
     ):
         abort(403)
 
@@ -57,7 +58,7 @@ def index():
     issue_by_type = []
     payment_by_type = []
 
-    if can_distribution or can_party:
+    if can_distribution:
         issue_rows = db.session.execute(
             select(
                 Party.party_type,
@@ -188,11 +189,15 @@ def index():
         expense_total = db.session.scalar(
             select(func.coalesce(func.sum(Expense.amount), 0)).where(Expense.business_date == selected_date)
         )
-        cash_rows = db.session.scalars(
+        accounts = db.session.scalars(
             select(CashAccount)
             .where(CashAccount.is_active.is_(True))
             .order_by(CashAccount.is_main.desc(), CashAccount.name.asc())
         ).all()
+        cash_rows = [{
+            "account": account,
+            "balance": cash_account_balance(account.id),
+        } for account in accounts]
         totals["cash_in"] = _amount(inflow)
         totals["cash_out"] = _amount(outflow)
         totals["expenses"] = _amount(expense_total)
@@ -215,5 +220,5 @@ def index():
         can_free=can_free,
         can_inventory=can_inventory,
         can_finance=can_finance,
-        can_party=can_party,
+        can_party=False,
     )
