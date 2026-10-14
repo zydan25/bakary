@@ -12,7 +12,7 @@
   <title>{% block title %}نظام إدارة المخبز{% endblock %} | Bakary</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/bakary.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-period-account-ux') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-card-detail-click') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -221,7 +221,7 @@
       {% endif %}
     </div>
   </div>
-  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20261014-card-detail-click') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
