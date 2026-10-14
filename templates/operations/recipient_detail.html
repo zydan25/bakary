@@ -1,0 +1,34 @@
+{% extends "layouts/base.html" %}
+{% block title %}ملف {{ recipient.name }}{% endblock %}
+{% block page_heading %}ملف المستفيد{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">التوزيع المجاني</p><h1>{{ recipient.name }}</h1><p class="heading-subtitle">{{ recipient.notes or 'لا توجد ملاحظات' }}</p></div>
+ <div class="heading-actions">
+  <a class="secondary-button" href="{{ url_for('operations.free_distribution') }}">قائمة المستفيدين</a>
+  <a class="primary-button" href="{{ url_for('operations.edit_free_recipient',recipient_id=recipient.id) }}">تعديل البيانات</a>
+ </div>
+</section>
+<section class="report-totals-grid">
+ <div><small>الصنف الافتراضي</small><strong>{{ recipient.default_product.name if recipient.default_product else 'غير محدد' }}</strong></div>
+ <div><small>الهدف اليومي</small><strong>{{ "{:,.3f}".format(recipient.daily_quantity) }} {{ recipient.default_product.unit_label if recipient.default_product else '' }}</strong></div>
+ <div><small>إجمالي الصرف التاريخي</small><strong>{{ "{:,.3f}".format(total_quantity) }}</strong></div>
+ <div><small>عدد عمليات الصرف</small><strong>{{ history|length }}</strong></div>
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>سجل التوزيع</h2><p>عمليات هذا المستفيد حسب الفترة والصنف.</p></div></div>
+ {% for row in history %}
+ <div class="product-history-row">
+  <div><strong>{{ row.product.name }}</strong><small>{{ row.period.business_date.isoformat() }} · {{ period_label(row.period.period_code) }} · {{ row.statement or '' }}</small></div>
+  <strong>{{ "{:,.3f}".format(row.quantity) }} {{ row.product.unit_label }}</strong>
+ </div>
+ {% else %}<p class="product-muted-empty">لم تُسجل عمليات صرف لهذا المستفيد بعد.</p>{% endfor %}
+</section>
+<section class="content-card product-danger-zone">
+ <div><strong>حذف المستفيد</strong><p>إذا كان للمستفيد سجل صرف سابق، يمنع الحذف النهائي حتى لا تضيع سجلات التوزيع، ويمكن إيقافه بدلًا من ذلك.</p></div>
+ <form method="post" action="{{ url_for('operations.delete_free_recipient',recipient_id=recipient.id) }}" data-confirm="هل تريد حذف هذا المستفيد نهائيًا؟">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="danger-button" type="submit">حذف نهائي</button>
+ </form>
+</section>
+{% endblock %}
