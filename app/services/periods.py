@@ -120,6 +120,6 @@ def selectable_open_periods(*, actor_id=None, limit=21):
 
 def period_option_label(period):
     today = business_today()
-    current = period.business_date == today and period.period_code == suggested_period_code()
+    current = period.status == "open" and period.business_date == today and period.period_code == suggested_period_code()
     prefix = "الفترة الحالية" if current else "فترة سابقة"
     return f"{prefix} — {period_day_name(period.business_date)} · {period_label(period.period_code)}"
