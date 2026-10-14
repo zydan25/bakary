@@ -109,6 +109,7 @@ def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
         assert dashboard.status_code == 200
         html = dashboard.get_data(as_text=True)
         assert "إجراءات سريعة" in html
-        assert "تسجيل عجنة" not in html
+        assert 'data-quick-action="production_batch"' not in html
+        assert 'data-quick-action="products"' in html
     finally:
         cleanup(app)
