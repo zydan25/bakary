@@ -14,7 +14,7 @@
 <section class="entity-list">
  {% for row in balance_rows %}
  <article class="entity-card">
-  <div class="entity-top"><div class="entity-avatar">{{ '▣' if row.account.account_type == 'bank' else 'ر.ي' }}</div><div class="entity-main"><h2>{{ row.account.name }}</h2><p>{{ row.account.code }} · {% if row.account.account_type == 'bank' %}حساب بنكي{% elif row.account.account_type == 'cash' %}نقدي{% else %}حساب آخر{% endif %}</p></div>
+  <div class="entity-top"><div class="entity-avatar">{{ '▣' if row.account.account_type == 'bank' else 'ر.ي' }}</div><div class="entity-main"><h2>{{ row.account.name }}</h2><p>{% if row.account.account_type == 'bank' %}حساب بنكي{% elif row.account.account_type == 'cash' %}نقدي{% else %}حساب آخر{% endif %}</p></div>
   {% if row.account.is_main %}<span class="status-badge status-primary">الصندوق الرئيسي</span>{% elif not row.account.is_active %}<span class="status-badge status-muted">موقوف</span>{% endif %}</div>
   <div class="stock-balance-panel"><small>الرصيد الحالي</small><strong class="{% if row.balance < 0 %}summary-red{% else %}stock-value{% endif %}">{{ "{:,.2f}".format(row.balance) }} <small>ريال</small></strong></div>
  </article>
@@ -35,7 +35,7 @@
  <form method="post" action="{{ url_for('finance.add_account') }}" class="form-stack">
   {{ account_form.hidden_tag() }}
   <div class="form-field">{{ account_form.name.label(class_="field-label") }}{{ account_form.name(class_="form-control",placeholder="مثال: حساب البيت") }}{% for error in account_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-  <div class="form-row"><div class="form-field">{{ account_form.code.label(class_="field-label") }}{{ account_form.code(class_="form-control",placeholder="HOME",dir="ltr") }}{% for error in account_form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div><div class="form-field">{{ account_form.account_type.label(class_="field-label") }}{{ account_form.account_type(class_="form-control",**{'data-searchable':'true'}) }}</div></div>
+  <div class="form-field">{{ account_form.account_type.label(class_="field-label") }}{{ account_form.account_type(class_="form-control",**{'data-searchable':'true'}) }}</div>
   <div class="form-field">{{ account_form.opening_balance.label(class_="field-label") }}{{ account_form.opening_balance(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in account_form.opening_balance.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
   <div class="inline-note">الرصيد الافتتاحي يسجل كحركة مستقلة قابلة للتتبع. اتركه صفرًا إذا لم يكن هناك رصيد حالي.</div>
   <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ الحساب</button><a class="secondary-button" href="{{ url_for('finance.index') }}">إلغاء</a></div>
