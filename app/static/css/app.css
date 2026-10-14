@@ -1479,3 +1479,25 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .app-confirm-actions { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Configurable progressive-web-app name and install icon */
+.pwa-settings-card .section-title { margin-bottom: 16px; }
+.pwa-icon-picker { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 16px; margin-top: 4px; }
+.pwa-icon-preview { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 8px; padding: 13px 10px; border: 1px solid #e1e8f2; border-radius: 15px; background: linear-gradient(145deg, #f8faff, #fff); }
+.pwa-icon-preview img { display: block; width: 76px; height: 76px; object-fit: contain; border-radius: 18px; filter: drop-shadow(0 3px 5px rgba(18,35,64,.12)); }
+.pwa-icon-preview span { color: #6c7890; font-size: 11px; font-weight: 750; }
+.pwa-icon-file-field { min-width: 0; margin: 0; }
+.pwa-icon-file-field input[type="file"] { padding: 8px; font-size: 12px; }
+.pwa-restore-form { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding-top: 17px; border-top: 1px solid #e9edf4; }
+.pwa-restore-copy { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
+.pwa-restore-copy strong { color: #36445b; font-size: 13px; }
+.pwa-restore-copy small { color: #7b8597; font-size: 11px; line-height: 1.6; }
+.pwa-restore-form .secondary-button { flex: 0 0 auto; min-height: 42px; }
+@media (max-width: 560px) {
+  .pwa-icon-picker { grid-template-columns: 84px minmax(0, 1fr); gap: 11px; align-items: start; }
+  .pwa-icon-preview { padding: 10px 6px; border-radius: 12px; }
+  .pwa-icon-preview img { width: 58px; height: 58px; border-radius: 14px; }
+  .pwa-icon-preview span { font-size: 10px; }
+  .pwa-icon-file-field input[type="file"] { padding: 7px 5px; font-size: 10.5px; }
+  .pwa-restore-form { align-items: stretch; flex-direction: column; gap: 10px; }
+  .pwa-restore-form .secondary-button { width: 100%; }
+}
