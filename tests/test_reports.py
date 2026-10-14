@@ -111,6 +111,11 @@ def test_report_center_aggregates_daily_business_data():
         assert "1,350.00" in page
         assert "1,300.00" in page
         assert "مخزون" in page
+        export_response = client.get("/reports/export.csv")
+        assert export_response.status_code == 200
+        assert "text/csv" in export_response.content_type
+        assert export_response.data.startswith(b"\\xef\\xbb\\xbf")
+        assert "إجمالي قيمة الصرف".encode("utf-8") in export_response.data
     finally:
         cleanup(app)
 
