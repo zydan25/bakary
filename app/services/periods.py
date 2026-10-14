@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.models.production import BusinessPeriod
 from app.models.setting import Setting
+from app.services.clock import business_today
 
 
 class PeriodRuleError(ValueError):
@@ -83,3 +84,42 @@ def period_label(code):
         "morning": "الفترة الصباحية",
         "evening": "الفترة المسائية",
     }.get(code, code)
+
+
+ARABIC_WEEKDAYS = ("الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد")
+
+
+def period_day_name(value):
+    return ARABIC_WEEKDAYS[value.weekday()]
+
+
+def selectable_open_periods(*, actor_id=None, limit=21):
+    """Ensure today's period exists when possible and return open periods."""
+    today = business_today()
+    code = suggested_period_code()
+    existing = db.session.scalar(select(BusinessPeriod).where(
+        BusinessPeriod.business_date == today,
+        BusinessPeriod.period_code == code,
+    ))
+    if existing is None:
+        try:
+            get_or_create_open_period(business_date=today, period_code=code, actor_id=actor_id)
+        except PeriodRuleError:
+            pass
+    rows = db.session.scalars(
+        select(BusinessPeriod).where(BusinessPeriod.status == "open")
+        .order_by(BusinessPeriod.business_date.desc(), BusinessPeriod.opened_at.desc(), BusinessPeriod.id.desc())
+        .limit(limit)
+    ).all()
+    rows.sort(key=lambda row: (
+        row.business_date == today and row.period_code == code,
+        row.business_date, row.opened_at, row.id,
+    ), reverse=True)
+    return rows
+
+
+def period_option_label(period):
+    today = business_today()
+    current = period.business_date == today and period.period_code == suggested_period_code()
+    prefix = "الفترة الحالية" if current else "فترة سابقة"
+    return f"{prefix} — {period_day_name(period.business_date)} · {period_label(period.period_code)}"
