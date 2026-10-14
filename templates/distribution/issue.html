@@ -8,7 +8,7 @@
     <h1>{{ meta.title }}</h1>
     <p class="heading-subtitle">سجّل الكمية؛ السعر والإجمالي يُحسبان من السعر الخاص بالحساب في الخادم.</p>
   </div>
-  <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">رجوع للحسابات</a>
+  <a class="secondary-button" href="{{ (url_for('parties.index') if party_type == 'all' else url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers')) }}">رجوع للحسابات</a>
 </section>
 
 <section class="content-card distribution-context">
@@ -63,7 +63,7 @@
 
     <div class="dialog-actions">
       <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل الصرف..." id="issue-submit">تسجيل صرف</button>
-      <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">إلغاء</a>
+      <a class="secondary-button" href="{{ (url_for('parties.index') if party_type == 'all' else url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers')) }}">إلغاء</a>
     </div>
   </section>
 </form>
