@@ -46,3 +46,26 @@ class PasswordChangeForm(FlaskForm):
         ],
     )
     submit = SubmitField("تحديث كلمة المرور")
+
+
+
+class AccountProfileForm(FlaskForm):
+    full_name = StringField(
+        "اسم المدير",
+        validators=[
+            DataRequired(message="أدخل الاسم."),
+            Length(min=2, max=160, message="يجب أن يكون الاسم بين حرفين و160 حرفًا."),
+        ],
+    )
+    phone = StringField(
+        "رقم الهاتف",
+        validators=[
+            DataRequired(message="أدخل رقم الهاتف."),
+            Length(max=32, message="رقم الهاتف طويل جدًا."),
+        ],
+    )
+    current_password = PasswordField(
+        "كلمة المرور الحالية للتأكيد",
+        validators=[DataRequired(message="أدخل كلمة المرور الحالية لحماية بيانات الحساب.")],
+    )
+    submit = SubmitField("حفظ البيانات")
