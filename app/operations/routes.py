@@ -7,15 +7,20 @@ from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models.closing import PeriodCloseProduct, PeriodHandover
+from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
 from app.models.employee import Employee
+from app.models.expense import Expense
+from app.models.finance import CashMovement
 from app.models.free_distribution import FreeDistribution, FreeRecipient
-from app.models.production import BusinessPeriod
+from app.models.party import Party
+from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
+from app.models.user import User
 from app.operations import operations_bp
 from app.operations.forms import FreeIssueForm, FreeRecipientForm, PeriodClosingForm
 from app.services.closing import (
@@ -525,4 +530,186 @@ def closing():
         quantity_inputs=quantity_inputs,
         raw_material_inputs=raw_material_inputs,
         calculation=calculation,
+    )
+
+
+def _period_report_permission():
+    if not any(current_user.has_permission(code) for code in (
+        "handover.manage", "free_distribution.manage", "distribution.reports",
+        "reports.view", "reports.export", "production.view", "production.manage",
+    )):
+        abort(403)
+
+
+@operations_bp.get("/periods/")
+@login_required
+def periods_report():
+    _period_report_permission()
+    selectable_open_periods(actor_id=current_user.id)
+    rows = db.session.scalars(
+        select(BusinessPeriod).order_by(
+            BusinessPeriod.business_date.desc(),
+            BusinessPeriod.opened_at.desc(),
+            BusinessPeriod.id.desc(),
+        ).limit(120)
+    ).all()
+    summaries = []
+    for period_row in rows:
+        issue_totals = db.session.execute(select(
+            func.coalesce(func.sum(DistributionIssue.quantity), 0),
+            func.coalesce(func.sum(DistributionIssue.total_amount), 0),
+        ).where(
+            DistributionIssue.business_date == period_row.business_date,
+            DistributionIssue.period_code == period_row.period_code,
+        )).one()
+        payments = db.session.scalar(select(func.coalesce(func.sum(PartyPayment.amount), 0)).where(
+            PartyPayment.business_date == period_row.business_date,
+            PartyPayment.period_code == period_row.period_code,
+        )) or 0
+        free_quantity = db.session.scalar(select(func.coalesce(func.sum(FreeDistribution.quantity), 0)).where(
+            FreeDistribution.period_id == period_row.id,
+        )) or 0
+        production_quantity = db.session.scalar(select(func.coalesce(func.sum(DoughBatch.produced_quantity), 0)).where(
+            DoughBatch.period_id == period_row.id,
+        )) or 0
+        handover = db.session.scalar(select(PeriodHandover).where(PeriodHandover.period_id == period_row.id))
+        summaries.append({
+            "period": period_row,
+            "weekday": period_day_name(period_row.business_date),
+            "issue_quantity": Decimal(str(issue_totals[0] or 0)),
+            "issue_amount": Decimal(str(issue_totals[1] or 0)),
+            "payments": Decimal(str(payments)),
+            "free_quantity": Decimal(str(free_quantity)),
+            "produced_quantity": Decimal(str(production_quantity)),
+            "handover": handover,
+        })
+    current_period = next((
+        item["period"] for item in summaries
+        if item["period"].status == "open"
+        and item["period"].business_date == business_today()
+        and item["period"].period_code == suggested_period_code()
+    ), None)
+    return render_template(
+        "operations/periods.html",
+        rows=summaries,
+        current_period=current_period,
+        period_option_label=period_option_label,
+    )
+
+
+@operations_bp.get("/periods/<int:period_id>")
+@login_required
+def period_detail(period_id):
+    _period_report_permission()
+    period = db.session.get(BusinessPeriod, period_id)
+    if period is None:
+        abort(404)
+    issues = db.session.scalars(select(DistributionIssue).where(
+        DistributionIssue.business_date == period.business_date,
+        DistributionIssue.period_code == period.period_code,
+    ).order_by(DistributionIssue.created_at.asc(), DistributionIssue.id.asc())).all()
+    payments = db.session.scalars(select(PartyPayment).where(
+        PartyPayment.business_date == period.business_date,
+        PartyPayment.period_code == period.period_code,
+    ).order_by(PartyPayment.created_at.asc(), PartyPayment.id.asc())).all()
+    free_rows = db.session.scalars(select(FreeDistribution).where(
+        FreeDistribution.period_id == period.id,
+    ).order_by(FreeDistribution.created_at.asc(), FreeDistribution.id.asc())).all()
+    batches = db.session.scalars(select(DoughBatch).where(
+        DoughBatch.period_id == period.id,
+    ).order_by(DoughBatch.created_at.asc(), DoughBatch.id.asc())).all()
+    expenses = db.session.scalars(select(Expense).where(
+        Expense.period_id == period.id,
+    ).order_by(Expense.created_at.asc(), Expense.id.asc())).all()
+    handover = db.session.scalar(select(PeriodHandover).where(PeriodHandover.period_id == period.id))
+    opener = db.session.get(User, period.opened_by_id) if period.opened_by_id else None
+
+    issue_quantity = sum((Decimal(str(row.quantity)) for row in issues), Decimal("0.000"))
+    issue_amount = sum((Decimal(str(row.total_amount)) for row in issues), Decimal("0.00"))
+    payment_amount = sum((Decimal(str(row.amount)) for row in payments), Decimal("0.00"))
+    free_quantity = sum((Decimal(str(row.quantity)) for row in free_rows), Decimal("0.000"))
+    production_quantity = sum((Decimal(str(row.produced_quantity)) for row in batches), Decimal("0.000"))
+
+    cash_opening = db.session.execute(select(func.coalesce(func.sum(case(
+        (CashMovement.direction == "in", CashMovement.amount), else_=-CashMovement.amount,
+    )), 0)).where(
+        (CashMovement.business_date < period.business_date)
+        | ((CashMovement.business_date == period.business_date) & (CashMovement.created_at < period.opened_at))
+    )).scalar_one()
+    cash_opening = Decimal(str(cash_opening or 0))
+
+    product_rows, material_rows, closed_rows = [], [], []
+    if period.status == "closed":
+        closed_rows, _saved_handover = get_closed_period_summary(period)
+        material_rows = get_closed_raw_material_summary(period)
+    else:
+        try:
+            for row in preview_period_close(period):
+                available = Decimal(str(row["available_quantity"]))
+                used = Decimal(str(row["paid_distribution_quantity"])) + Decimal(str(row["free_distribution_quantity"]))
+                product_rows.append({
+                    "product": row["product"],
+                    "opening": row["opening_quantity"],
+                    "produced": row["produced_quantity"],
+                    "paid": row["paid_distribution_quantity"],
+                    "free": row["free_distribution_quantity"],
+                    "available": available,
+                    "remaining": available - used,
+                    "unit_label": row["product"].unit_label,
+                })
+            material_rows = preview_raw_material_balances(period)
+        except ClosingRuleError as exc:
+            flash(str(exc), "error")
+
+    parties = {}
+    for row in issues:
+        item = parties.setdefault(row.party_id, {
+            "party": row.party,
+            "party_type": row.party.party_type,
+            "quantity": Decimal("0.000"),
+            "issued": Decimal("0.00"),
+            "paid": Decimal("0.00"),
+        })
+        item["quantity"] += Decimal(str(row.quantity))
+        item["issued"] += Decimal(str(row.total_amount))
+    for row in payments:
+        item = parties.setdefault(row.party_id, {
+            "party": row.party,
+            "party_type": row.party.party_type,
+            "quantity": Decimal("0.000"),
+            "issued": Decimal("0.00"),
+            "paid": Decimal("0.00"),
+        })
+        item["paid"] += Decimal(str(row.amount))
+    for party_id, item in parties.items():
+        entries = db.session.scalars(select(PartyLedgerEntry).where(
+            PartyLedgerEntry.party_id == party_id,
+        )).all()
+        item["remaining_due"] = sum(
+            (Decimal(str(entry.debit_amount or 0)) - Decimal(str(entry.credit_amount or 0)) for entry in entries),
+            Decimal("0.00"),
+        )
+
+    return render_template(
+        "operations/period_detail.html",
+        period=period,
+        weekday=period_day_name(period.business_date),
+        opener=opener,
+        issues=issues,
+        payments=payments,
+        free_rows=free_rows,
+        batches=batches,
+        expenses=expenses,
+        handover=handover,
+        paid_quantity=issue_quantity,
+        paid_amount=issue_amount,
+        payment_amount=payment_amount,
+        free_quantity=free_quantity,
+        production_quantity=production_quantity,
+        cash_opening=cash_opening,
+        product_rows=product_rows,
+        closed_rows=closed_rows,
+        material_rows=material_rows,
+        party_summaries=sorted(parties.values(), key=lambda item: (item["party_type"], item["party"].name.casefold())),
+        period_label=period_label,
     )
