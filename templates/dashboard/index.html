@@ -28,6 +28,8 @@
     <path d="M2 5h12v12H2zM14 9h4l4 4v4h-8z"/><circle cx="6" cy="19" r="1.8"/><circle cx="18" cy="19" r="1.8"/>
   {% elif name == 'plus' %}
     <path d="M12 5v14M5 12h14"/>
+  {% elif name == 'period' %}
+    <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h3M7 17h5"/><circle cx="17" cy="16" r="3.2"/><path d="M17 14.5V16l1.1.8"/>
   {% elif name == 'list' %}
     <path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.1M3.5 12h.1M3.5 18h.1"/>
   {% endif %}
@@ -60,8 +62,8 @@
 <section class="dashboard-modules-section{% if dashboard_card_theme == 'water_pos' %} dashboard-modules-section--water-pos{% endif %}">
   <div class="section-title"><h2>وحدات النظام</h2></div>
   <div class="dashboard-module-grid{% if dashboard_card_theme == 'water_pos' %} dashboard-module-grid--water-pos{% endif %}">
-    {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
-    <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
+    {% if current_user.has_permission('handover.manage') or current_user.has_permission('free_distribution.manage') or current_user.has_permission('distribution.reports') or current_user.has_permission('reports.view') or current_user.has_permission('reports.export') or current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('operations.current_period') }}"><span class="dashboard-module-icon">{{ ui_icon('period', 32) }}</span><strong>الفترة الحالية</strong><small>الافتتاحية والحركات والأرصدة والإقفال</small></a>
     {% endif %}
     {% if current_user.has_permission('parties.view') or current_user.has_permission('parties.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('parties.distributors') }}"><span class="dashboard-module-icon">{{ ui_icon('parties', 32) }}</span><strong>الموزعون والعملاء</strong><small>البطاقات والأسعار الخاصة والحسابات</small></a>
@@ -77,8 +79,8 @@
     {% if current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('production.index') }}"><span class="dashboard-module-icon">{{ ui_icon('oven', 32) }}</span><strong>العجنات والإنتاج</strong><small>تسجيل الإنتاج واستهلاك الدقيق</small></a>
     {% endif %}
-    {% if current_user.has_permission('inventory.view') or current_user.has_permission('inventory.manage') %}
-    <a class="dashboard-module module-ready" href="{{ url_for('inventory.index') }}"><span class="dashboard-module-icon">{{ ui_icon('box', 32) }}</span><strong>المخزون</strong><small>المواد الخام والأرصدة والحركات</small></a>
+    {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
     {% endif %}
     {% if current_user.has_permission('free_distribution.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('operations.free_distribution') }}"><span class="dashboard-module-icon">{{ ui_icon('gift', 32) }}</span><strong>التوزيع المجاني</strong><small>المستفيدون وكميات الصرف للفترة</small></a>
