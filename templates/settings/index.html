@@ -37,9 +37,38 @@
       <button type="button" class="quiet-icon-button danger-icon-button" data-remove-row aria-label="حذف الاختصار" title="حذف الاختصار">×</button>
      </div>
     </div>
+    <div class="form-field shortcut-preset-field">
+     <label class="field-label" for="shortcut-preset-{{ loop.index0 }}">اختيار وجهة جاهزة (اختياري)</label>
+     <select class="form-control" id="shortcut-preset-{{ loop.index0 }}" data-shortcut-preset>
+      <option value="">رابط مخصص — اختر وجهة من القائمة أو اكتب الرابط</option>
+      <option value="/distribution/payment/distributor" data-label="دفع موزع">دفع موزع</option>
+      <option value="/distribution/payment/customer" data-label="دفع عميل">دفع عميل</option>
+      <option value="/distribution/payment/all" data-label="دفع عام">دفع عام للموزعين والعملاء</option>
+      <option value="/distribution/issue/distributor" data-label="صرف موزع">صرف موزع</option>
+      <option value="/distribution/issue/customer" data-label="صرف عميل">صرف عميل</option>
+      <option value="/distribution/issue/all" data-label="صرف عام">صرف عام للموزعين والعملاء</option>
+      <option value="/parties/" data-label="الموزعون والعملاء">الموزعون والعملاء</option>
+      <option value="/products/" data-label="الأصناف">الأصناف</option>
+      <option value="/products/?action=new" data-label="إضافة صنف">إضافة صنف</option>
+      <option value="/inventory/" data-label="المواد الخام">المواد الخام</option>
+      <option value="/inventory/?action=new" data-label="إضافة مادة خام">إضافة مادة خام</option>
+      <option value="/inventory/stock?kind=opening_balance" data-label="رصيد افتتاحي">رصيد افتتاحي للمخزون</option>
+      <option value="/production/" data-label="العجنات والإنتاج">العجنات والإنتاج</option>
+      <option value="/production/?action=batch" data-label="تسجيل عجنة">تسجيل عجنة</option>
+      <option value="/operations/free-distribution/" data-label="التوزيع المجاني">التوزيع المجاني</option>
+      <option value="/operations/closing/" data-label="إقفال الفترة">إقفال الفترة والتسليم</option>
+      <option value="/reports/" data-label="التقارير">مركز التقارير</option>
+      <option value="/finance/" data-label="الصندوق والحسابات">الصندوق والحسابات</option>
+      <option value="/finance/expenses/?action=new" data-label="تسجيل مصروف">تسجيل مصروف</option>
+      <option value="/staff/employees/" data-label="الموظفون">الموظفون</option>
+      <option value="/staff/roles" data-label="الأدوار والصلاحيات">الأدوار والصلاحيات</option>
+      <option value="/settings/" data-label="الإعدادات">إعدادات النظام</option>
+      <option value="/auth/account" data-label="حسابي">حسابي</option>
+     </select>
+    </div>
     <div class="form-row">
-     <div class="form-field"><label class="field-label" for="action-label-{{ loop.index0 }}">اسم الزر</label><input class="form-control" id="action-label-{{ loop.index0 }}" name="action_label_{{ loop.index0 }}" value="{{ action.label }}" maxlength="50" placeholder="مثال: دفع موزع" required></div>
-     <div class="form-field"><label class="field-label" for="action-url-{{ loop.index0 }}">الرابط الداخلي</label><input class="form-control" id="action-url-{{ loop.index0 }}" name="action_url_{{ loop.index0 }}" value="{{ action.url }}" dir="ltr" placeholder="/distribution/payment/distributor" required></div>
+     <div class="form-field"><label class="field-label" for="action-label-{{ loop.index0 }}">اسم الزر</label><input class="form-control" data-action-field="label" id="action-label-{{ loop.index0 }}" name="action_label_{{ loop.index0 }}" value="{{ action.label }}" maxlength="50" placeholder="مثال: دفع موزع" required></div>
+     <div class="form-field"><label class="field-label" for="action-url-{{ loop.index0 }}">الرابط الداخلي</label><input class="form-control" data-action-field="url" id="action-url-{{ loop.index0 }}" name="action_url_{{ loop.index0 }}" value="{{ action.url }}" dir="ltr" placeholder="/distribution/payment/distributor" required></div>
     </div>
    </article>
    {% endfor %}
@@ -73,15 +102,23 @@
  const maxRows = 20;
  const renumber = () => {
    [...container.querySelectorAll("[data-shortcut-row]")].forEach((row, index) => {
-     row.querySelectorAll("input").forEach(input => {
-       const suffix = input.type === "checkbox" ? "enabled" : input.name.includes("label") ? "label" : "url";
-       input.name = "action_" + suffix + "_" + index;
-       if (input.id) input.id = "action-" + suffix + "-" + index;
-     });
-     row.querySelectorAll("label[for]").forEach(label => {
-       const target = row.querySelector("input[id]");
-       if (target) label.htmlFor = target.id;
-     });
+     const enabled = row.querySelector('input[type="checkbox"]');
+     enabled.name = "action_enabled_" + index;
+     const labelInput = row.querySelector('[data-action-field="label"]');
+     const urlInput = row.querySelector('[data-action-field="url"]');
+     labelInput.name = "action_label_" + index;
+     labelInput.id = "action-label-" + index;
+     urlInput.name = "action_url_" + index;
+     urlInput.id = "action-url-" + index;
+     const label = row.querySelector('label[for^="action-label-"]');
+     const urlLabel = row.querySelector('label[for^="action-url-"]');
+     if (label) label.htmlFor = labelInput.id;
+     if (urlLabel) urlLabel.htmlFor = urlInput.id;
+     const preset = row.querySelector("[data-shortcut-preset]");
+     if (preset) {
+       preset.id = "shortcut-preset-" + index;
+       preset.value = [...preset.options].some(option => option.value === urlInput.value) ? urlInput.value : "";
+     }
      const up = row.querySelector("[data-move-up]");
      const down = row.querySelector("[data-move-down]");
      up.disabled = index === 0;
@@ -95,12 +132,41 @@
    row.setAttribute("data-shortcut-row", "");
    row.innerHTML = `
     <div class="dashboard-action-row-top">
-      <label class="dashboard-action-enable"><input type="checkbox" value="1"><span>إظهار</span></label>
+      <label class="dashboard-action-enable"><input type="checkbox" value="1" checked><span>إظهار</span></label>
       <div class="dashboard-action-order"><button type="button" class="quiet-icon-button" data-move-up aria-label="تحريك لأعلى">↑</button><button type="button" class="quiet-icon-button" data-move-down aria-label="تحريك لأسفل">↓</button><button type="button" class="quiet-icon-button danger-icon-button" data-remove-row aria-label="حذف الاختصار">×</button></div>
     </div>
+    <div class="form-field shortcut-preset-field">
+      <label class="field-label">وجهة جاهزة (اختياري)</label>
+      <select class="form-control" data-shortcut-preset>
+       <option value="">رابط مخصص — اختر وجهة أو اكتب الرابط</option>
+       <option value="/distribution/payment/distributor" data-label="دفع موزع">دفع موزع</option>
+       <option value="/distribution/payment/customer" data-label="دفع عميل">دفع عميل</option>
+       <option value="/distribution/payment/all" data-label="دفع عام">دفع عام للموزعين والعملاء</option>
+       <option value="/distribution/issue/distributor" data-label="صرف موزع">صرف موزع</option>
+       <option value="/distribution/issue/customer" data-label="صرف عميل">صرف عميل</option>
+       <option value="/distribution/issue/all" data-label="صرف عام">صرف عام للموزعين والعملاء</option>
+       <option value="/parties/" data-label="الموزعون والعملاء">الموزعون والعملاء</option>
+       <option value="/products/" data-label="الأصناف">الأصناف</option>
+       <option value="/products/?action=new" data-label="إضافة صنف">إضافة صنف</option>
+       <option value="/inventory/" data-label="المواد الخام">المواد الخام</option>
+       <option value="/inventory/?action=new" data-label="إضافة مادة خام">إضافة مادة خام</option>
+       <option value="/inventory/stock?kind=opening_balance" data-label="رصيد افتتاحي">رصيد افتتاحي للمخزون</option>
+       <option value="/production/" data-label="العجنات والإنتاج">العجنات والإنتاج</option>
+       <option value="/production/?action=batch" data-label="تسجيل عجنة">تسجيل عجنة</option>
+       <option value="/operations/free-distribution/" data-label="التوزيع المجاني">التوزيع المجاني</option>
+       <option value="/operations/closing/" data-label="إقفال الفترة">إقفال الفترة والتسليم</option>
+       <option value="/reports/" data-label="التقارير">مركز التقارير</option>
+       <option value="/finance/" data-label="الصندوق والحسابات">الصندوق والحسابات</option>
+       <option value="/finance/expenses/?action=new" data-label="تسجيل مصروف">تسجيل مصروف</option>
+       <option value="/staff/employees/" data-label="الموظفون">الموظفون</option>
+       <option value="/staff/roles" data-label="الأدوار والصلاحيات">الأدوار والصلاحيات</option>
+       <option value="/settings/" data-label="الإعدادات">إعدادات النظام</option>
+       <option value="/auth/account" data-label="حسابي">حسابي</option>
+      </select>
+    </div>
     <div class="form-row">
-      <div class="form-field"><label class="field-label">اسم الزر</label><input class="form-control" maxlength="50" placeholder="مثال: صرف عميل" required></div>
-      <div class="form-field"><label class="field-label">الرابط الداخلي</label><input class="form-control" dir="ltr" placeholder="/distribution/issue/customer" required></div>
+      <div class="form-field"><label class="field-label">اسم الزر</label><input class="form-control" data-action-field="label" maxlength="50" placeholder="مثال: صرف عميل" required></div>
+      <div class="form-field"><label class="field-label">الرابط الداخلي</label><input class="form-control" data-action-field="url" dir="ltr" placeholder="/distribution/issue/customer" required></div>
     </div>`;
    return row;
  };
@@ -112,11 +178,19 @@
    else if (event.target.closest("[data-move-down]") && row.nextElementSibling) container.insertBefore(row.nextElementSibling, row);
    renumber();
  });
+ container.addEventListener("change", event => {
+   const preset = event.target.closest("[data-shortcut-preset]");
+   if (!preset || !preset.value) return;
+   const row = preset.closest("[data-shortcut-row]");
+   const option = preset.selectedOptions[0];
+   row.querySelector('[data-action-field="url"]').value = preset.value;
+   if (option.dataset.label) row.querySelector('[data-action-field="label"]').value = option.dataset.label;
+ });
  addButton.addEventListener("click", () => {
    if (container.querySelectorAll("[data-shortcut-row]").length >= maxRows) return;
    container.appendChild(makeRow());
    renumber();
-   container.lastElementChild.querySelector('input:not([type="checkbox"])').focus();
+   container.lastElementChild.querySelector('[data-action-field="label"]').focus();
  });
  renumber();
 })();
