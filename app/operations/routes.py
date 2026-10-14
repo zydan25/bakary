@@ -249,7 +249,6 @@ def _closing_context(*, form=None, action=None, selected_date=None, selected_cod
 @operations_bp.route("/closing/", methods=["GET", "POST"])
 @login_required
 def closing():
-    _require("production.manage")
     _require("handover.manage")
     selected_date = _parse_date(request.args.get("date") or request.form.get("business_date"))
     selected_code = _clean_period_code(request.args.get("period_code") or request.form.get("period_code"))
