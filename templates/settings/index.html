@@ -20,6 +20,22 @@
  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الإعدادات...">حفظ الإعدادات</button></div>
 </form>
 
+<section class="content-card dashboard-action-settings">
+ <div class="section-title"><div><h2>تصميم بطاقات الصفحة الرئيسية</h2><p>اختر مظهر بطاقات وحدات النظام. التصميم الحالي هو الافتراضي ولن يتغير ما لم تختَر التصميم الجديد.</p></div></div>
+ <form method="post" class="form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save_dashboard_card_theme">
+  <div class="form-field">
+   <label class="field-label" for="dashboard-card-theme">مظهر البطاقات</label>
+   <select class="form-control" id="dashboard-card-theme" name="dashboard_card_theme">
+    <option value="current" {% if dashboard_card_theme == 'current' %}selected{% endif %}>التصميم الحالي — بدون تغيير</option>
+    <option value="water_pos" {% if dashboard_card_theme == 'water_pos' %}selected{% endif %}>بطاقات Water POS — أيقونة في الأعلى وعنوان في الأسفل</option>
+   </select>
+   <small class="subtle-hint">يؤثر هذا الخيار على بطاقات «وحدات النظام» فقط، ولا يغيّر أزرار الإجراءات السريعة أو وظائف النظام.</small>
+  </div>
+  <div class="dialog-actions"><button type="submit" class="primary-button button-wide">حفظ تصميم البطاقات</button></div>
+ </form>
+</section>
 
 <section class="content-card dashboard-action-settings">
  <div class="section-title"><div><h2>تخصيص أزرار الرئيسية</h2><p>غيّر اسم أي زر ومساره، واسحب الترتيب باستخدام الأسهم، أو أضف اختصارات جديدة إلى أي صفحة داخل النظام.</p></div></div>
