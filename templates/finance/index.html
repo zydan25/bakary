@@ -17,13 +17,15 @@
   <div class="entity-top"><div class="entity-avatar">{{ '▣' if row.account.account_type == 'bank' else 'ر.ي' }}</div><div class="entity-main"><h2>{{ row.account.name }}</h2><p>{% if row.account.account_type == 'bank' %}حساب بنكي{% elif row.account.account_type == 'cash' %}نقدي{% else %}حساب آخر{% endif %}</p></div>
   {% if row.account.is_main %}<span class="status-badge status-primary">الصندوق الرئيسي</span>{% elif not row.account.is_active %}<span class="status-badge status-muted">موقوف</span>{% endif %}</div>
   <div class="stock-balance-panel"><small>الرصيد الحالي</small><strong class="{% if row.balance < 0 %}summary-red{% else %}stock-value{% endif %}">{{ "{:,.2f}".format(row.balance) }} <small>ريال</small></strong></div>
-  {% if can_manage_accounts and not row.account.is_main %}
+  {% if can_manage_accounts %}
   <div class="entity-actions finance-account-actions">
    <a class="secondary-button" href="{{ url_for('finance.index',edit=row.account.id) }}">تعديل الحساب</a>
+   {% if not row.account.is_main %}
    <form method="post" action="{{ url_for('finance.delete_account',account_id=row.account.id) }}" data-confirm="{% if row.account.is_active %}هل تريد حذف هذا الحساب؟ إذا كان مرتبطًا بحركات مالية فسيتم إيقافه فقط للاحتفاظ بالسجلات.{% else %}هل تريد حذف هذا الحساب نهائيًا إذا لم يرتبط بحركات مالية؟{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="quiet-button" type="submit">{% if row.account.is_active %}حذف / إيقاف{% else %}حذف نهائي{% endif %}</button>
    </form>
+   {% endif %}
   </div>
   {% endif %}
  </article>
