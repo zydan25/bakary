@@ -772,3 +772,14 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .closing-calc-result > div { gap: 5px; }
   .closing-calc-result strong { font-size: 12px; }
 }
+
+
+/* Bakery settings */
+.settings-form { display: flex; flex-direction: column; gap: 16px; }
+.settings-guidance { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.settings-guidance strong { display: block; margin-bottom: 3px; font-size: 15px; }
+.settings-guidance p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.settings-current-values { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.settings-current-values > div { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 11px; border: 1px solid #e7ebf2; border-radius: 12px; background: #fafbfe; }
+.settings-current-values small { color: #667085; font-size: 11px; }
+.settings-current-values strong { color: #273246; font-size: 14px; overflow-wrap: anywhere; }
