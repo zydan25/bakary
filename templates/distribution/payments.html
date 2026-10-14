@@ -3,7 +3,7 @@
 {% block page_heading %}سجل الدفعات{% endblock %}
 {% block content %}
 <section class="page-heading-row">
- <div><p class="eyebrow">الصرف والتحصيل</p><h1>سجل الدفعات</h1><p class="heading-subtitle">كل دفعات الموزعين والعملاء، بما في ذلك القيد المالي وحركة الصندوق المرتبطة بها.</p></div>
+ <div><p class="eyebrow">الصرف والتحصيل</p><h1>سجل الدفعات</h1></div>
  <div class="heading-actions"><a class="primary-button" href="{{ url_for('distribution.payment',party_type='all') }}">＋ تسجيل دفعة</a></div>
 </section>
 <form class="content-card record-filter-toolbar" method="get" action="{{ url_for('distribution.payment_records') }}" data-live-filter-target="#payment-record-list">
