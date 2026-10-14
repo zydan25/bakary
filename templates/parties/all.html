@@ -14,14 +14,14 @@
  </div>
 </section>
 
-<form class="search-toolbar combined-party-toolbar" method="get" action="{{ url_for('parties.index') }}">
+<form class="search-toolbar combined-party-toolbar" data-live-filter-target="#combined-party-list" method="get" action="{{ url_for('parties.index') }}">
  <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث بالاسم أو الهاتف" aria-label="بحث بالاسم أو الهاتف" autocomplete="off"></label>
- <select class="form-control" name="party_type" aria-label="نوع الحساب" data-searchable="true">
+ <select class="form-control" name="party_type" aria-label="نوع الحساب" data-searchable="true" data-live-submit>
   <option value="all" {% if party_type_filter == 'all' %}selected{% endif %}>كل الأنواع</option>
   <option value="distributor" {% if party_type_filter == 'distributor' %}selected{% endif %}>الموزعون</option>
   <option value="customer" {% if party_type_filter == 'customer' %}selected{% endif %}>العملاء</option>
  </select>
- <select class="form-control" name="sort" aria-label="ترتيب الحسابات" data-searchable="true">
+ <select class="form-control" name="sort" aria-label="ترتيب الحسابات" data-searchable="true" data-live-submit>
   <option value="name" {% if sort == 'name' %}selected{% endif %}>الاسم: أ إلى ي</option>
   <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>الاسم: ي إلى أ</option>
   <option value="newest" {% if sort == 'newest' %}selected{% endif %}>الأحدث</option>
@@ -30,7 +30,6 @@
   <option value="balance_low" {% if sort == 'balance_low' %}selected{% endif %}>الأقل رصيدًا</option>
  </select>
  <input type="hidden" name="status" value="{{ status }}">
- <button type="submit" class="secondary-button">عرض</button>
 </form>
 
 <div class="filter-chips" role="group" aria-label="حالة الحسابات">
