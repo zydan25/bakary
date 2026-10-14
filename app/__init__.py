@@ -57,6 +57,7 @@ def create_app(config_name=None, test_config=None):
     from app.staff import staff_bp
     from app.operations import operations_bp
     from app.finance import finance_bp
+    from app.settings import settings_bp
     from app.cli import register_cli
 
     @login_manager.user_loader
@@ -77,7 +78,19 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(staff_bp)
     app.register_blueprint(operations_bp)
     app.register_blueprint(finance_bp)
+    app.register_blueprint(settings_bp)
     register_cli(app)
+
+    @app.context_processor
+    def inject_bakery_business_name():
+        try:
+            setting = db.session.query(models.Setting).filter_by(key="business_name").first()
+            name = setting.value if setting is not None else None
+            if not isinstance(name, str) or not name.strip():
+                name = "نظام إدارة المخبز"
+        except Exception:
+            name = "نظام إدارة المخبز"
+        return {"bakery_business_name": name}
 
     @app.before_request
     def require_first_password_change():
