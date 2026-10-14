@@ -1,9 +1,11 @@
 """Permission-aware consolidated daily report center."""
 
+import csv
 from datetime import date
 from decimal import Decimal
+from io import StringIO
 
-from flask import abort, render_template, request
+from flask import Response, abort, render_template, request
 from flask_login import current_user, login_required
 from sqlalchemy import case, func, select
 
@@ -222,3 +224,133 @@ def index():
         can_finance=can_finance,
         can_party=False,
     )
+
+
+
+@reports_bp.get("/export.csv")
+@login_required
+def export_csv():
+    """Export only report sections explicitly permitted for the signed-in user."""
+    if not current_user.has_permission("reports.export"):
+        abort(403)
+
+    selected_date = _parse_date(request.args.get("date"))
+    rows = [["التاريخ", "القسم", "المؤشر", "القيمة", "الوحدة", "التفاصيل"]]
+    date_label = selected_date.isoformat()
+
+    if current_user.has_permission("distribution.reports"):
+        issues = db.session.execute(
+            select(
+                Party.party_type,
+                func.coalesce(func.sum(DistributionIssue.quantity), 0),
+                func.coalesce(func.sum(DistributionIssue.total_amount), 0),
+                func.count(DistributionIssue.id),
+            )
+            .join(Party, DistributionIssue.party_id == Party.id)
+            .where(DistributionIssue.business_date == selected_date)
+            .group_by(Party.party_type)
+        ).all()
+        for party_type, quantity, amount, count in issues:
+            label = "الموزعون" if party_type == "distributor" else "العملاء والنقاط"
+            rows.append([date_label, "الصرف", "الكمية", quantity, "حبة", label])
+            rows.append([date_label, "الصرف", "القيمة", amount, "ريال", label])
+            rows.append([date_label, "الصرف", "عدد العمليات", count, "عملية", label])
+
+        payments = db.session.execute(
+            select(
+                Party.party_type,
+                func.coalesce(func.sum(PartyPayment.amount), 0),
+                func.count(PartyPayment.id),
+            )
+            .join(Party, PartyPayment.party_id == Party.id)
+            .where(PartyPayment.business_date == selected_date)
+            .group_by(Party.party_type)
+        ).all()
+        for party_type, amount, count in payments:
+            label = "الموزعون" if party_type == "distributor" else "العملاء والنقاط"
+            rows.append([date_label, "التحصيل", "المدفوع", amount, "ريال", label])
+            rows.append([date_label, "التحصيل", "عدد الدفعات", count, "دفعة", label])
+
+    if current_user.has_permission("production.view") or current_user.has_permission("production.manage"):
+        production = db.session.execute(
+            select(
+                Product.name,
+                Product.unit_label,
+                func.coalesce(func.sum(DoughBatch.produced_quantity), 0),
+            )
+            .join(BusinessPeriod, DoughBatch.period_id == BusinessPeriod.id)
+            .join(Product, DoughBatch.product_id == Product.id)
+            .where(BusinessPeriod.business_date == selected_date)
+            .group_by(Product.id, Product.name, Product.unit_label)
+            .order_by(Product.name.asc())
+        ).all()
+        for name, unit_label, quantity in production:
+            rows.append([date_label, "الإنتاج", "الكمية المنتجة", quantity, unit_label, name])
+
+        closing = db.session.execute(
+            select(
+                func.coalesce(func.sum(PeriodCloseProduct.expected_shop_sales), 0),
+                func.coalesce(func.sum(PeriodCloseProduct.shop_sale_quantity), 0),
+                func.coalesce(func.sum(PeriodCloseProduct.damaged_quantity), 0),
+                func.coalesce(func.sum(PeriodCloseProduct.carried_quantity), 0),
+            )
+            .join(BusinessPeriod, PeriodCloseProduct.period_id == BusinessPeriod.id)
+            .where(BusinessPeriod.business_date == selected_date, BusinessPeriod.status == "closed")
+        ).one()
+        rows.append([date_label, "الإقفال", "قيمة البيع المباشر المتوقعة", closing[0], "ريال", "الفترات المختتمة"])
+        rows.append([date_label, "الإقفال", "كمية بيع المحل", closing[1], "حبة", "الفترات المختتمة"])
+        rows.append([date_label, "الإقفال", "الكمية التالفة", closing[2], "حبة", "الفترات المختتمة"])
+        rows.append([date_label, "الإقفال", "المتبقي المرحّل", closing[3], "حبة", "الفترات المختتمة"])
+
+    if current_user.has_permission("free_distribution.manage"):
+        free_rows = db.session.execute(
+            select(Product.name, Product.unit_label, func.coalesce(func.sum(FreeDistribution.quantity), 0))
+            .join(BusinessPeriod, FreeDistribution.period_id == BusinessPeriod.id)
+            .join(Product, FreeDistribution.product_id == Product.id)
+            .where(BusinessPeriod.business_date == selected_date)
+            .group_by(Product.id, Product.name, Product.unit_label)
+            .order_by(Product.name.asc())
+        ).all()
+        for name, unit_label, quantity in free_rows:
+            rows.append([date_label, "التوزيع المجاني", "الكمية المصروفة", quantity, unit_label, name])
+
+    if current_user.has_permission("inventory.view") or current_user.has_permission("inventory.manage"):
+        items = db.session.scalars(
+            select(InventoryItem).where(InventoryItem.is_active.is_(True)).order_by(InventoryItem.name.asc())
+        ).all()
+        for item in items:
+            valuation = inventory_valuation(item.id)
+            rows.append([date_label, "المخزون الحالي", "الرصيد", valuation["quantity"], item.unit_label, item.name])
+            rows.append([
+                date_label, "المخزون الحالي", "القيمة التقديرية",
+                valuation["stock_value"] if valuation["stock_value"] is not None else "غير مكتملة",
+                "ريال" if valuation["stock_value"] is not None else "",
+                item.name,
+            ])
+
+    if any(current_user.has_permission(code) for code in ("finance.view", "finance.manage", "expenses.manage", "cash.accounts.manage")):
+        inflow, outflow = db.session.execute(
+            select(
+                func.coalesce(func.sum(case((CashMovement.direction == "in", CashMovement.amount), else_=0)), 0),
+                func.coalesce(func.sum(case((CashMovement.direction == "out", CashMovement.amount), else_=0)), 0),
+            ).where(CashMovement.business_date == selected_date)
+        ).one()
+        expenses_value = db.session.scalar(
+            select(func.coalesce(func.sum(Expense.amount), 0)).where(Expense.business_date == selected_date)
+        )
+        rows.append([date_label, "النقدية", "إجمالي الوارد", inflow, "ريال", "كل الحسابات"])
+        rows.append([date_label, "النقدية", "إجمالي الصادر", outflow, "ريال", "كل الحسابات"])
+        rows.append([date_label, "النقدية", "إجمالي المصروفات", expenses_value, "ريال", "حسب سجل المصروفات"])
+        accounts = db.session.scalars(
+            select(CashAccount).where(CashAccount.is_active.is_(True)).order_by(CashAccount.name.asc())
+        ).all()
+        for account in accounts:
+            rows.append([date_label, "رصيد الحساب", "الرصيد الحالي", cash_account_balance(account.id), "ريال", account.name])
+
+    stream = StringIO(newline="")
+    writer = csv.writer(stream)
+    writer.writerows(rows)
+    response = Response(stream.getvalue().encode("utf-8-sig"), mimetype="text/csv; charset=utf-8")
+    response.headers["Content-Disposition"] = f'attachment; filename="bakary-report-{selected_date.strftime("%Y%m%d")}.csv"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
