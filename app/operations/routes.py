@@ -20,6 +20,7 @@ from app.operations.forms import FreeIssueForm, FreeRecipientForm, PeriodClosing
 from app.services.closing import (
     ClosingRuleError,
     calculate_close_rows,
+    preview_period_close,
     close_period_with_handover,
     get_closed_period_summary,
 )
@@ -215,8 +216,14 @@ def _closing_context(*, form=None, action=None, selected_date=None, selected_cod
         form.expenses_amount.data = "0"
         form.handed_to_cash_amount.data = ""
     closed_rows, handover = ([], None)
+    base_rows = []
     if period and period.status == "closed":
         closed_rows, handover = get_closed_period_summary(period)
+    elif period and period.status == "open":
+        try:
+            base_rows = preview_period_close(period)
+        except ClosingRuleError:
+            base_rows = []
     quantity_inputs = quantity_inputs or {}
     return render_template(
         "operations/closing.html",
@@ -229,6 +236,7 @@ def _closing_context(*, form=None, action=None, selected_date=None, selected_cod
         period_choices=_period_choices(),
         closed_rows=closed_rows,
         handover=handover,
+        base_rows=base_rows,
         quantity_inputs=quantity_inputs,
         calculation=calculation,
         show_details=action in {"details", "calculate"} or (period is not None and period.status == "open" and request.method == "POST"),
