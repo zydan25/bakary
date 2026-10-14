@@ -1,0 +1,47 @@
+{% extends "layouts/base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_heading %}لوحة التحكم{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div>
+    <p class="eyebrow">نظرة عامة</p>
+    <h1>أهلًا، {{ current_user.full_name.split(' ')[0] }}</h1>
+    <p class="heading-subtitle">ملخص أعمال المخبز — {{ today.strftime('%Y-%m-%d') }}</p>
+  </div>
+</section>
+
+<section class="content-card dashboard-welcome">
+  <div class="dashboard-welcome-copy">
+    <p class="eyebrow">BAKARY</p>
+    <h2>إدارة يومك من مكان واحد</h2>
+    <p>تم تجهيز أساس النظام والصلاحيات. ستظهر هنا مؤشرات التشغيل بعد تفعيل وحدات التوزيع والإنتاج والمخزون والحسابات.</p>
+  </div>
+  <div class="dashboard-emblem" aria-hidden="true">♨</div>
+</section>
+
+<section class="section-title section-title-spaced">
+  <div><h2>وحدات النظام</h2><p>تظهر الوحدات وفق الصلاحيات الممنوحة لحسابك.</p></div>
+</section>
+<section class="module-grid">
+  {% if current_user.has_permission('parties.view') %}
+  <article class="module-card"><span class="module-card-icon">♧</span><strong>الموزعون والعملاء</strong><small>التسعير والصرف والتحصيل</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
+  {% endif %}
+  {% if current_user.has_permission('production.manage') %}
+  <article class="module-card"><span class="module-card-icon">♨</span><strong>الإنتاج والعجنات</strong><small>الإنتاج وإقفال الفترة</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
+  {% endif %}
+  {% if current_user.has_permission('inventory.view') %}
+  <article class="module-card"><span class="module-card-icon">▤</span><strong>المخزون</strong><small>المواد الخام والأرصدة</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
+  {% endif %}
+  {% if current_user.has_permission('finance.view') %}
+  <article class="module-card"><span class="module-card-icon">◉</span><strong>الصندوق والحسابات</strong><small>القبض والصرف والتسليمات</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
+  {% endif %}
+  {% if current_user.has_permission('users.manage') %}
+  <article class="module-card"><span class="module-card-icon">♙</span><strong>الموظفون والصلاحيات</strong><small>الحسابات والأدوار</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
+  {% endif %}
+</section>
+
+<section class="content-card signed-note">
+  <strong>برمجة وتصميم م. زيدان العطاب</strong>
+  <span>774952665 · يمن كود للتقنيات الذكية</span>
+</section>
+{% endblock %}
