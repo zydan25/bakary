@@ -193,6 +193,77 @@ def customers():
     return _party_page("customer")
 
 
+@parties_bp.get("/")
+@login_required
+def index():
+    """Combined directory for distributors and customers."""
+    if not _can_view_parties():
+        abort(403)
+
+    query = (request.args.get("q") or "").strip()
+    status = request.args.get("status", "active")
+    if status not in {"active", "inactive", "all"}:
+        status = "active"
+    type_filter = request.args.get("party_type", "all")
+    if type_filter not in {"all", "distributor", "customer"}:
+        type_filter = "all"
+    sort = request.args.get("sort", "name")
+    if sort not in {"name", "name_desc", "newest", "oldest", "balance_high", "balance_low"}:
+        sort = "name"
+
+    statement = select(Party)
+    if status == "active":
+        statement = statement.where(Party.is_active.is_(True))
+    elif status == "inactive":
+        statement = statement.where(Party.is_active.is_(False))
+    if type_filter != "all":
+        statement = statement.where(Party.party_type == type_filter)
+    if query:
+        needle = "%" + query + "%"
+        statement = statement.where(
+            or_(Party.name.ilike(needle), Party.phone.ilike(needle))
+        )
+    items = db.session.scalars(statement.order_by(Party.name.asc())).all()
+
+    balances = {}
+    if items:
+        rows = db.session.execute(
+            select(
+                PartyLedgerEntry.party_id,
+                func.coalesce(func.sum(PartyLedgerEntry.debit_amount), 0),
+                func.coalesce(func.sum(PartyLedgerEntry.credit_amount), 0),
+            )
+            .where(PartyLedgerEntry.party_id.in_([item.id for item in items]))
+            .group_by(PartyLedgerEntry.party_id)
+        ).all()
+        for party_id, debit, credit in rows:
+            balances[party_id] = Decimal(str(debit or 0)) - Decimal(str(credit or 0))
+        for item in items:
+            balances.setdefault(item.id, Decimal("0.00"))
+
+    if sort == "name_desc":
+        items.sort(key=lambda item: item.name.casefold(), reverse=True)
+    elif sort == "newest":
+        items.sort(key=lambda item: item.created_at, reverse=True)
+    elif sort == "oldest":
+        items.sort(key=lambda item: item.created_at)
+    elif sort == "balance_high":
+        items.sort(key=lambda item: balances.get(item.id, Decimal("0.00")), reverse=True)
+    elif sort == "balance_low":
+        items.sort(key=lambda item: balances.get(item.id, Decimal("0.00")))
+
+    return render_template(
+        "parties/all.html",
+        items=items,
+        balances=balances,
+        query=query,
+        status=status,
+        party_type_filter=type_filter,
+        sort=sort,
+        can_manage=current_user.has_permission("parties.manage"),
+    )
+
+
 @parties_bp.post("/distributors/<int:party_id>/toggle")
 @login_required
 def toggle_distributor(party_id):
