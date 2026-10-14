@@ -1,47 +1,102 @@
 {% extends "layouts/base.html" %}
-{% block title %}لوحة التحكم{% endblock %}
-{% block page_heading %}لوحة التحكم{% endblock %}
+{% block title %}الرئيسية{% endblock %}
+{% block page_heading %}الرئيسية{% endblock %}
+
+{% macro ui_icon(name, size=30) -%}
+<svg class="ui-icon" xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  {% if name == 'bread' %}
+    <path d="M4 10.5C2.8 9.8 2.5 8.8 3 7.5c.8-2.1 3.5-3.4 6-3.1 1.2-1.1 3.1-1.4 4.7-.7 2 .8 2.9 2.5 2.8 4.2 2 .7 3.1 2.2 2.8 4.1l-.9 5.2c-.2 1.1-1.1 1.8-2.2 1.8H6.4c-1.1 0-2-.8-2.2-1.9L3.5 13c-.2-1 .1-1.8.5-2.5Z"/><path d="m8 7 1.4 2.1M12 6.1l1.2 2M16 9.4l1.5 1.4"/>
+  {% elif name == 'parties' %}
+    <circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.3-3.1 2.5-5.2 6.2-5.2s5.9 2.1 6.2 5.2"/><circle cx="17.2" cy="9" r="2.5"/><path d="M16 14.2c3.4-.3 5.2 1.4 5.4 4.1"/>
+  {% elif name == 'oven' %}
+    <rect x="3" y="4" width="18" height="16" rx="2.2"/><path d="M3 8h18M7 6h.1M10 6h.1"/><rect x="6" y="11" width="12" height="6" rx="1.2"/><path d="M9 14h.1M12 14h.1M15 14h.1"/>
+  {% elif name == 'box' %}
+    <path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/><path d="m7.5 5 9 4"/>
+  {% elif name == 'cash' or name == 'wallet' %}
+    <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H20v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M3 7h17v10h-5a3 3 0 0 1 0-6h5"/><path d="M15 14h.1"/>
+  {% elif name == 'users' or name == 'parties' %}
+    <circle cx="8" cy="7.5" r="3"/><path d="M2.5 19c.2-3.4 2.1-5.5 5.5-5.5s5.3 2.1 5.5 5.5"/><circle cx="17" cy="8.5" r="2.4"/><path d="M15 14.2c3.9-.1 6 1.6 6.4 4.8"/>
+  {% elif name == 'report' %}
+    <path d="M4 20V11M10 20V5M16 20v-7M22 20H2"/><path d="m3 7 5-3 5 4 7-5"/>
+  {% elif name == 'receipt' %}
+    <path d="M6 3.5h12v17l-2.5-1.7-3.5 1.7-3.5-1.7L6 20.5v-17Z"/><path d="M9 8h6M9 12h6M9 16h3"/>
+  {% elif name == 'gift' %}
+    <rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M2.5 6.5h19v3h-19zM12 6.5V21"/><path d="M12 6.5H8.2C5.2 6.5 5.4 2.8 8 3c2.2.1 4 3.5 4 3.5ZM12 6.5h3.8c3 0 2.8-3.7.2-3.5-2.2.1-4 3.5-4 3.5Z"/>
+  {% elif name == 'person' %}
+    <circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20c.3-4.1 2.9-6.5 7.5-6.5s7.2 2.4 7.5 6.5Z"/>
+  {% elif name == 'truck' %}
+    <path d="M2 5h12v12H2zM14 9h4l4 4v4h-8z"/><circle cx="6" cy="19" r="1.8"/><circle cx="18" cy="19" r="1.8"/>
+  {% elif name == 'plus' %}
+    <path d="M12 5v14M5 12h14"/>
+  {% elif name == 'list' %}
+    <path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.1M3.5 12h.1M3.5 18h.1"/>
+  {% endif %}
+</svg>
+{%- endmacro %}
+
 {% block content %}
-<section class="page-heading-row">
+<section class="page-heading-row dashboard-heading">
   <div>
-    <p class="eyebrow">نظرة عامة</p>
+    <p class="eyebrow">الرئيسية</p>
     <h1>أهلًا، {{ current_user.full_name.split(' ')[0] }}</h1>
-    <p class="heading-subtitle">ملخص أعمال المخبز — {{ today.strftime('%Y-%m-%d') }}</p>
+    <p class="heading-subtitle">نظام إدارة المخبز · {{ today.strftime('%Y-%m-%d') }}</p>
+  </div>
+  <span class="dashboard-date" aria-label="تاريخ اليوم">{{ today.strftime('%d-%m') }}</span>
+</section>
+
+<section class="content-card dashboard-intro">
+  <span class="dashboard-intro-icon">{{ ui_icon('bread', 34) }}</span>
+  <div class="dashboard-intro-copy">
+    <strong>إدارة أعمال المخبز</strong>
+    <p>التوزيع والإنتاج والمخزون والحسابات في مكان واحد.</p>
   </div>
 </section>
 
-<section class="content-card dashboard-welcome">
-  <div class="dashboard-welcome-copy">
-    <p class="eyebrow">BAKARY</p>
-    <h2>إدارة يومك من مكان واحد</h2>
-    <p>تم تجهيز أساس النظام والصلاحيات. ستظهر هنا مؤشرات التشغيل بعد تفعيل وحدات التوزيع والإنتاج والمخزون والحسابات.</p>
+<section class="content-card quick-actions-card">
+  <div class="section-title"><div><h2>إجراءات سريعة</h2><p>الوصول إلى أكثر الصفحات استخدامًا</p></div></div>
+  <div class="quick-action-list">
+    {% if current_user.has_permission('products.manage') %}
+    <a class="quick-action" href="{{ url_for('products.index', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة صنف</span></a>
+    {% endif %}
+    {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
+    <a class="quick-action" href="{{ url_for('products.index') }}"><span class="quick-action-plus">{{ ui_icon('list', 17) }}</span><span>الأصناف</span></a>
+    {% endif %}
+    <a class="quick-action" href="{{ url_for('auth.account') }}"><span class="quick-action-plus">{{ ui_icon('person', 17) }}</span><span>حسابي</span></a>
   </div>
-  <div class="dashboard-emblem" aria-hidden="true">♨</div>
 </section>
 
-<section class="section-title section-title-spaced">
-  <div><h2>وحدات النظام</h2><p>تظهر الوحدات وفق الصلاحيات الممنوحة لحسابك.</p></div>
-</section>
-<section class="module-grid">
-  {% if current_user.has_permission('parties.view') %}
-  <article class="module-card"><span class="module-card-icon">♧</span><strong>الموزعون والعملاء</strong><small>التسعير والصرف والتحصيل</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
-  {% endif %}
-  {% if current_user.has_permission('production.manage') %}
-  <article class="module-card"><span class="module-card-icon">♨</span><strong>الإنتاج والعجنات</strong><small>الإنتاج وإقفال الفترة</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
-  {% endif %}
-  {% if current_user.has_permission('inventory.view') %}
-  <article class="module-card"><span class="module-card-icon">▤</span><strong>المخزون</strong><small>المواد الخام والأرصدة</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
-  {% endif %}
-  {% if current_user.has_permission('finance.view') %}
-  <article class="module-card"><span class="module-card-icon">◉</span><strong>الصندوق والحسابات</strong><small>القبض والصرف والتسليمات</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
-  {% endif %}
-  {% if current_user.has_permission('users.manage') %}
-  <article class="module-card"><span class="module-card-icon">♙</span><strong>الموظفون والصلاحيات</strong><small>الحسابات والأدوار</small><span class="module-status">ضمن مراحل التنفيذ</span></article>
-  {% endif %}
+<section class="dashboard-modules-section">
+  <div class="section-title"><div><h2>وحدات النظام</h2><p>تظهر الأقسام وفق صلاحيات حسابك، وتُفعّل وظائف كل قسم ضمن مرحلته.</p></div></div>
+  <div class="dashboard-module-grid">
+    {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
+    {% endif %}
+    {% if current_user.has_permission('parties.view') or current_user.has_permission('parties.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('parties', 32) }}</span><strong>الموزعون والعملاء</strong><small>البيانات والأسعار الخاصة</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('truck', 32) }}</span><strong>الصرف والتحصيل</strong><small>الصرف والدفع وكشوف الحساب</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('oven', 32) }}</span><strong>العجنات والإنتاج</strong><small>الإنتاج وترحيل الفترات</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('inventory.view') or current_user.has_permission('inventory.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('box', 32) }}</span><strong>المخزون</strong><small>المواد الخام وحركات الرصيد</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('free_distribution.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('gift', 32) }}</span><strong>التوزيع المجاني</strong><small>المستفيدون وصرف الفترة</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('wallet', 32) }}</span><strong>الصندوق والحسابات</strong><small>القبض والمصروفات والتحويلات</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('users', 32) }}</span><strong>الموظفون والصلاحيات</strong><small>المستخدمون والأدوار</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+    {% if current_user.has_permission('reports.view') or current_user.has_permission('handover.manage') %}
+    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('report', 32) }}</span><strong>التقارير والتسليمات</strong><small>تقارير اليوم والفترة</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% endif %}
+  </div>
 </section>
 
-<section class="content-card signed-note">
-  <strong>برمجة وتصميم م. زيدان العطاب</strong>
-  <span>774952665 · يمن كود للتقنيات الذكية</span>
-</section>
+<section class="content-card dashboard-signature"><strong>برمجة وتصميم م. زيدان العطاب</strong><span>774952665 · يمن كود للتقنيات الذكية</span></section>
 {% endblock %}
