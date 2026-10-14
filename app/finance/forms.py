@@ -23,6 +23,15 @@ class CashAccountForm(FlaskForm):
         choices=[("cash", "نقدي"), ("bank", "بنكي"), ("other", "آخر")],
         validators=[DataRequired()],
     )
+    opening_balance = DecimalField(
+        "الرصيد الافتتاحي",
+        places=2,
+        default=Decimal("0.00"),
+        validators=[
+            DataRequired(message="أدخل الرصيد الافتتاحي، ولو صفرًا."),
+            NumberRange(min=Decimal("0.00"), message="الرصيد الافتتاحي لا يمكن أن يكون سالبًا."),
+        ],
+    )
 
 
 class ExpenseForm(FlaskForm):
