@@ -58,3 +58,38 @@ class PaymentForm(FlaskForm):
         validators=[Length(max=1000, message="البيان طويل جدًا.")],
     )
     request_key = HiddenField(validators=[DataRequired()])
+
+
+
+class IssueEditForm(FlaskForm):
+    party_id = SelectField(
+        "الحساب",
+        coerce=int,
+        validators=[DataRequired(message="اختر الحساب.")],
+    )
+    product_id = SelectField(
+        "الصنف",
+        coerce=int,
+        validators=[DataRequired(message="اختر الصنف.")],
+    )
+    quantity = IntegerField(
+        "الكمية",
+        validators=[
+            DataRequired(message="أدخل الكمية."),
+            NumberRange(min=1, message="يجب أن تكون الكمية أكبر من صفر."),
+        ],
+    )
+    statement = TextAreaField("البيان", validators=[Length(max=1000, message="البيان طويل جدًا.")])
+
+
+class PaymentEditForm(FlaskForm):
+    party_id = SelectField(
+        "الحساب",
+        coerce=int,
+        validators=[DataRequired(message="اختر الحساب.")],
+    )
+    amount = StringField(
+        "المبلغ المدفوع",
+        validators=[DataRequired(message="أدخل المبلغ المدفوع.")],
+    )
+    statement = TextAreaField("البيان", validators=[Length(max=1000, message="البيان طويل جدًا.")])
