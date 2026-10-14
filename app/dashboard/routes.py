@@ -1,4 +1,4 @@
-"""Dashboard entry page and permission-safe quick shortcuts."""
+"""Dashboard entry page and configurable quick shortcuts."""
 
 from flask import render_template
 from flask_login import current_user
@@ -8,20 +8,29 @@ from app.auth.decorators import permission_required
 from app.dashboard import dashboard_bp
 from app.extensions import db
 from app.models.setting import Setting
+from app.services.dashboard import normalize_quick_actions
 
 
-DEFAULT_QUICK_ACTIONS = {
-    "product_new",
-    "inventory_new",
-    "production_batch",
-    "employee_new",
-    "free_recipient",
-    "expense_new",
-    "products",
-    "distributor_new",
-    "customer_new",
-    "account",
-}
+def _can_open_shortcut(path):
+    checks = (
+        (("/distribution/payment/",), ("distribution.payment",)),
+        (("/distribution/issue/",), ("distribution.issue",)),
+        (("/products",), ("products.view", "products.manage")),
+        (("/inventory",), ("inventory.view", "inventory.manage")),
+        (("/production",), ("production.view", "production.manage")),
+        (("/staff/employees",), ("employees.manage",)),
+        (("/staff/roles",), ("users.manage",)),
+        (("/operations/free-distribution",), ("free_distribution.manage",)),
+        (("/finance/expenses",), ("expenses.manage",)),
+        (("/finance",), ("finance.view", "finance.manage", "expenses.manage", "cash.accounts.manage")),
+        (("/parties",), ("parties.view", "parties.manage")),
+        (("/reports",), ("reports.view", "reports.export")),
+    )
+    for prefixes, permissions in checks:
+        if any(path.startswith(prefix) for prefix in prefixes):
+            return any(current_user.has_permission(permission) for permission in permissions)
+    # Custom links remain configurable; destination routes still enforce authorization.
+    return True
 
 
 @dashboard_bp.get("/")
@@ -31,14 +40,13 @@ def index():
     setting = db.session.scalar(
         select(Setting).where(Setting.key == "dashboard_quick_actions")
     )
-    # Older installs have no saved preference, so keep the original buttons visible.
-    quick_actions_enabled = (
-        set(setting.value)
-        if setting is not None and isinstance(setting.value, list)
-        else set(DEFAULT_QUICK_ACTIONS)
-    )
+    configured = normalize_quick_actions(setting.value if setting is not None else None)
+    quick_actions = [
+        action for action in configured
+        if action["enabled"] and _can_open_shortcut(action["url"].split("?", 1)[0])
+    ]
     return render_template(
         "dashboard/index.html",
         role_names=role_names,
-        quick_actions_enabled=quick_actions_enabled,
+        quick_actions=quick_actions,
     )
