@@ -9,6 +9,7 @@ from app.models.product import Product
 from app.models.setting import Setting
 from app.settings import settings_bp
 from app.settings.forms import BakerySettingsForm
+from app.services.dashboard import DEFAULT_QUICK_ACTIONS, normalize_quick_actions, validate_internal_path
 
 
 SETTING_DESCRIPTIONS = {
@@ -66,16 +67,45 @@ def index():
         flash("أضف صنفًا نشطًا واحدًا على الأقل قبل ضبط الصنف الافتراضي.", "error")
 
     if request.method == "POST" and request.form.get("action") == "save_quick_actions":
-        requested = set(request.form.getlist("quick_actions"))
-        enabled = [key for key in QUICK_ACTION_KEYS if key in requested]
+        actions = []
+        errors = []
+        for index in range(20):
+            label = (request.form.get(f"action_label_{index}") or "").strip()
+            raw_url = (request.form.get(f"action_url_{index}") or "").strip()
+            enabled = request.form.get(f"action_enabled_{index}") == "1"
+            if not label and not raw_url:
+                continue
+            if not label:
+                errors.append(f"الاختصار رقم {index + 1}: أدخل اسم الزر.")
+                continue
+            safe_url = validate_internal_path(raw_url)
+            if safe_url is None:
+                errors.append(f"الاختصار «{label}»: أدخل مسارًا داخليًا يبدأ بـ / مثل /distribution/payment/distributor.")
+                continue
+            actions.append({"label": label[:50], "url": safe_url, "enabled": enabled})
+        if len(actions) > 20:
+            errors.append("الحد الأقصى هو 20 اختصارًا.")
+        if errors:
+            for error in errors:
+                flash(error, "error")
+        else:
+            try:
+                _save_setting("dashboard_quick_actions", actions)
+                db.session.commit()
+                flash("تم حفظ أسماء أزرار الصفحة الرئيسية وروابطها وترتيبها.", "success")
+                return redirect(url_for("settings.index"))
+            except Exception:
+                db.session.rollback()
+                flash("تعذر حفظ أزرار الإجراءات السريعة. لم يتم تأكيد التغييرات.", "error")
+    elif request.method == "POST" and request.form.get("action") == "save_bottom_nav":
         try:
-            _save_setting("dashboard_quick_actions", enabled)
+            _save_setting("show_bottom_nav", request.form.get("show_bottom_nav") == "1")
             db.session.commit()
-            flash("تم حفظ أزرار الإجراءات السريعة في الصفحة الرئيسية.", "success")
+            flash("تم حفظ إعداد الشريط السفلي.", "success")
             return redirect(url_for("settings.index"))
         except Exception:
             db.session.rollback()
-            flash("تعذر حفظ أزرار الإجراءات السريعة. لم يتم تأكيد التغييرات.", "error")
+            flash("تعذر حفظ إعداد الشريط السفلي.", "error")
     elif form.validate_on_submit():
         product = db.session.scalar(
             select(Product).where(
@@ -109,17 +139,14 @@ def index():
         form.operating_period_mode.data = mode if mode in {"daily", "morning_evening"} else "daily"
 
     saved_quick_actions = _setting_value("dashboard_quick_actions")
-    quick_actions_enabled = (
-        set(saved_quick_actions)
-        if isinstance(saved_quick_actions, list)
-        else set(QUICK_ACTION_KEYS)
-    )
+    quick_actions = normalize_quick_actions(saved_quick_actions)
+    show_bottom_nav = _setting_value("show_bottom_nav", True) is not False
 
     return render_template(
         "settings/index.html",
         form=form,
         products=products,
         active_default=next((product for product in products if product.is_default), None),
-        quick_action_options=QUICK_ACTION_OPTIONS,
-        quick_actions_enabled=quick_actions_enabled,
+        quick_actions=quick_actions,
+        show_bottom_nav=show_bottom_nav,
     )
