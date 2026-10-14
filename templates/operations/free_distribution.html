@@ -26,14 +26,14 @@
  {% set issued = records | selectattr('recipient_id','equalto',recipient.id) | list %}
  <article class="entity-card">
   <div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2>{{ recipient.name }}</h2><p>{{ recipient.notes or 'لا توجد ملاحظات' }}</p></div>
-   {% if issued %}<span class="status-badge status-primary">تم الصرف</span>{% else %}<span class="status-badge status-muted">لم يُصرف بعد</span>{% endif %}
+   {% if not recipient.is_active %}<span class="status-badge status-muted">موقوف</span>{% elif issued %}<span class="status-badge status-primary">تم الصرف</span>{% else %}<span class="status-badge status-muted">لم يُصرف بعد</span>{% endif %}
   </div>
   {% if issued %}
   <div class="party-price-list">{% for record in issued %}<span class="party-price-chip">{{ record.product.name }} <strong>{{ "{:,.3f}".format(record.quantity) }} {{ record.product.unit_label }}</strong></span>{% endfor %}</div>
   {% endif %}
   <div class="entity-actions">
-   {% if not period or period.status == 'open' %}<a class="primary-button" href="{{ url_for('operations.free_distribution',action='issue',recipient_id=recipient.id,date=selected_date.isoformat(),period_code=selected_code) }}">صرف لهذا المستفيد</a>{% endif %}
-   <form method="post" action="{{ url_for('operations.toggle_free_recipient',recipient_id=recipient.id) }}" data-confirm="هل تريد إيقاف هذا المستفيد من القوائم الجديدة؟"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="quiet-button" type="submit">إيقاف</button></form>
+   {% if recipient.is_active and (not period or period.status == 'open') %}<a class="primary-button" href="{{ url_for('operations.free_distribution',action='issue',recipient_id=recipient.id,date=selected_date.isoformat(),period_code=selected_code) }}">صرف لهذا المستفيد</a>{% endif %}
+   <form method="post" action="{{ url_for('operations.toggle_free_recipient',recipient_id=recipient.id) }}" data-confirm="{% if recipient.is_active %}هل تريد إيقاف هذا المستفيد من القوائم الجديدة؟{% else %}هل تريد تفعيل هذا المستفيد؟{% endif %}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="quiet-button" type="submit">{% if recipient.is_active %}إيقاف{% else %}تفعيل{% endif %}</button></form>
   </div>
  </article>
  {% else %}<div class="empty-state"><h2>لا يوجد مستفيدون مجانيون</h2><p>أضف الأسماء والملاحظات، ثم سجل الصرف الفعلي لكل فترة.</p></div>{% endfor %}
