@@ -1501,3 +1501,14 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .pwa-restore-form { align-items: stretch; flex-direction: column; gap: 10px; }
   .pwa-restore-form .secondary-button { width: 100%; }
 }
+
+/* Keep logout beside the signed-in manager; the topbar power button only exits the app. */
+.sidebar-user-copy { flex: 1 1 auto; }
+.sidebar-user-logout-form { display: flex; flex: 0 0 auto; align-items: center; margin: 0; }
+.sidebar-user-logout-form .icon-button { width: 35px; height: 35px; min-width: 35px; border-radius: 11px; }
+.sidebar-user-logout-form .logout-trigger { border-color: #e8dfe2; background: #fff8f9; }
+.sidebar-user-logout-form .logout-trigger:hover { border-color: #f1cfd4; background: #fff0f2; }
+.exit-trigger { color: #3158a6; }
+.exit-trigger:hover { border-color: #cad8f4; background: #f0f5ff; color: #1d469b; }
+.exit-confirm-mark { border-color: #d5e0f6; background: #eef4ff; color: #3158a6; }
+
