@@ -2,7 +2,7 @@
 
 import os
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 
@@ -63,11 +63,23 @@ def create_app(config_name=None, test_config=None):
             "auth.account",
             "auth.logout",
             "static",
+            "service_worker",
             "health.health",
         }
         if request.endpoint not in allowed_endpoints:
             return redirect(url_for("auth.account"))
         return None
+
+    @app.get("/sw.js", endpoint="service_worker")
+    def service_worker():
+        response = send_from_directory(
+            app.static_folder,
+            "sw.js",
+            mimetype="application/javascript",
+            max_age=0,
+        )
+        response.headers["Service-Worker-Allowed"] = "/"
+        return response
 
     @app.get("/")
     def home():
