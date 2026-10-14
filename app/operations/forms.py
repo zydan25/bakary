@@ -16,7 +16,7 @@ class FreeRecipientForm(FlaskForm):
     )
     product_id = SelectField("الصنف الافتراضي", coerce=int, validators=[DataRequired(message="اختر الصنف.")])
     quantity = DecimalField(
-        "الكمية المصروفة",
+        "الكمية اليومية المتوقعة",
         places=3,
         validators=[
             DataRequired(message="أدخل الكمية المصروفة."),
