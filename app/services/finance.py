@@ -89,6 +89,9 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
     key = (request_key or "").strip()
     if not key:
         raise FinanceRuleError("انتهت صلاحية نموذج المصروف. أعد فتحه وحاول مجددًا.")
+    prior = db.session.scalar(select(Expense).where(Expense.request_key == key))
+    if prior is not None:
+        return prior, False
     expense = Expense(
         title=title,
         amount=amount,
@@ -96,6 +99,7 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
         business_date=business_date or date.today(),
         period_id=period_id,
         statement=(statement or "").strip() or None,
+        request_key=key,
         created_by_id=actor_id,
     )
     try:
@@ -116,6 +120,9 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
         return expense
     except IntegrityError as exc:
         db.session.rollback()
+        prior = db.session.scalar(select(Expense).where(Expense.request_key == key))
+        if prior is not None:
+            return prior, False
         raise FinanceRuleError("تعذر حفظ المصروف بسبب تعارض في البيانات.") from exc
     except Exception:
         db.session.rollback()
