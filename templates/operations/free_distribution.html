@@ -3,8 +3,13 @@
 {% block page_heading %}التوزيع المجاني{% endblock %}
 {% block content %}
 <section class="page-heading-row">
- <div><p class="eyebrow">التوزيع المجاني</p><h1>المستفيدون المجانيون</h1><p class="heading-subtitle">سجّل المستفيد مرة واحدة، ثم سجل ما صُرف له في كل فترة تشغيلية.</p></div>
- <a class="primary-button" href="{{ url_for('operations.free_distribution',action='recipient',date=selected_date.isoformat(),period_code=selected_code) }}">＋ إضافة مستفيد</a>
+ <div><p class="eyebrow">التوزيع المجاني</p><h1>المستفيدون المجانيون</h1><p class="heading-subtitle">الهدف اليومي منفصل عن الصرف الفعلي المسجل لكل فترة.</p></div>
+ <a class="primary-button" href="{{ url_for('operations.free_distribution',action='recipient') }}">＋ إضافة مستفيد</a>
+</section>
+<section class="free-total-grid">
+ <article><small>المفترض توزيعه يوميًا</small><strong>{{ "{:,.3f}".format(expected_total) }}</strong><span>حسب المستفيدين النشطين</span></article>
+ <article><small>الموزع في الفترة المختارة</small><strong>{{ "{:,.3f}".format(distributed_total) }}</strong><span>{{ selected_period_label }}</span></article>
+ <article><small>المتبقي عن الهدف اليومي</small><strong>{{ "{:,.3f}".format(expected_total - distributed_total) }}</strong><span>قد يكون سالبًا عند تجاوز الهدف</span></article>
 </section>
 
 <form class="content-card report-filter-form" method="get" action="{{ url_for('operations.free_distribution') }}">
@@ -24,14 +29,15 @@
 <section class="entity-list">
  {% for recipient in recipients %}
  {% set issued = records | selectattr('recipient_id','equalto',recipient.id) | list %}
- <article class="entity-card">
-  <div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2>{{ recipient.name }}</h2><p>{{ recipient.notes or 'لا توجد ملاحظات' }}</p></div>
+ <article class="entity-card" data-searchable-card data-search-text="{{ recipient.name }} {{ recipient.notes or '' }}">
+  <div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2><a class="entity-title-link" href="{{ url_for('operations.recipient_detail',recipient_id=recipient.id) }}">{{ recipient.name }}</a></h2><p>{{ recipient.default_product.name if recipient.default_product else 'لا يوجد صنف افتراضي' }} · الهدف اليومي {{ "{:,.3f}".format(recipient.daily_quantity) }}{% if recipient.notes %} · {{ recipient.notes }}{% endif %}</p></div>
    {% if not recipient.is_active %}<span class="status-badge status-muted">موقوف</span>{% elif issued %}<span class="status-badge status-primary">تم الصرف</span>{% else %}<span class="status-badge status-muted">لم يُصرف بعد</span>{% endif %}
   </div>
   {% if issued %}
   <div class="party-price-list">{% for record in issued %}<span class="party-price-chip">{{ record.product.name }} <strong>{{ "{:,.3f}".format(record.quantity) }} {{ record.product.unit_label }}</strong></span>{% endfor %}</div>
   {% endif %}
   <div class="entity-actions">
+   <a class="secondary-button" href="{{ url_for('operations.recipient_detail',recipient_id=recipient.id) }}">ملف المستفيد</a>
    {% if recipient.is_active and (not period or period.status == 'open') %}<a class="primary-button" href="{{ url_for('operations.free_distribution',action='issue',recipient_id=recipient.id,date=selected_date.isoformat(),period_code=selected_code) }}">صرف لهذا المستفيد</a>{% endif %}
    <form method="post" action="{{ url_for('operations.toggle_free_recipient',recipient_id=recipient.id) }}" data-confirm="{% if recipient.is_active %}هل تريد إيقاف هذا المستفيد من القوائم الجديدة؟{% else %}هل تريد تفعيل هذا المستفيد؟{% endif %}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="quiet-button" type="submit">{% if recipient.is_active %}إيقاف{% else %}تفعيل{% endif %}</button></form>
   </div>
@@ -49,16 +55,14 @@
 </section>
 
 <dialog class="form-dialog" id="free-recipient-dialog" data-auto-open="{{ 'true' if show_recipient_form else 'false' }}">
- <div class="dialog-header"><div><p class="eyebrow">قائمة المستفيدين</p><h2>إضافة مستفيد مجاني</h2></div><a class="dialog-close" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat(),period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
- <form method="post" action="{{ url_for('operations.create_free_recipient') }}" class="form-stack">
+ <div class="dialog-header"><div><p class="eyebrow">قائمة المستفيدين</p><h2>{{ 'تعديل المستفيد' if editing_recipient else 'إضافة مستفيد مجاني' }}</h2></div><a class="dialog-close" href="{{ url_for('operations.recipient_detail',recipient_id=editing_recipient.id) if editing_recipient else url_for('operations.free_distribution') }}" aria-label="إغلاق">×</a></div>
+ <form method="post" action="{{ url_for('operations.edit_free_recipient',recipient_id=editing_recipient.id) if editing_recipient else url_for('operations.create_free_recipient') }}" class="form-stack">
   {{ recipient_form.hidden_tag() }}
-  <input type="hidden" name="business_date" value="{{ selected_date.isoformat() }}">
-  <input type="hidden" name="period_code" value="{{ selected_code }}">
   <div class="form-field">{{ recipient_form.name.label(class_="field-label") }}{{ recipient_form.name(class_="form-control",placeholder="اسم المستفيد") }}{% for error in recipient_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
   <div class="form-field">{{ recipient_form.product_id.label(class_="field-label") }}{{ recipient_form.product_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in recipient_form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
   <div class="form-field">{{ recipient_form.quantity.label(class_="field-label") }}{{ recipient_form.quantity(class_="form-control",inputmode="decimal",placeholder="الكمية المصروفة",**{'data-quantity-words':'true','data-unit':'حبة'}) }}{% for error in recipient_form.quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
   <div class="form-field">{{ recipient_form.notes.label(class_="field-label") }}{{ recipient_form.notes(class_="form-control free-notes-field",rows="1",placeholder="ملاحظات اختيارية") }}</div>
-  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ حفظ المستفيد...">حفظ المستفيد وتسجيل الكمية</button><a class="secondary-button" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat(),period_code=selected_code) }}">إلغاء</a></div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">{{ 'حفظ التعديلات' if editing_recipient else 'حفظ المستفيد' }}</button><a class="secondary-button" href="{{ url_for('operations.recipient_detail',recipient_id=editing_recipient.id) if editing_recipient else url_for('operations.free_distribution') }}">إلغاء</a></div>
  </form>
 </dialog>
 
