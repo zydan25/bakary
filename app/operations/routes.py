@@ -279,16 +279,24 @@ def delete_free_recipient(recipient_id):
     recipient = db.session.get(FreeRecipient, recipient_id)
     if recipient is None:
         abort(404)
-    history_count = db.session.scalar(
-        select(func.count()).select_from(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id)
-    ) or 0
-    if history_count:
-        flash("لا يمكن حذف المستفيد نهائيًا لارتباطه بسجلات صرف سابقة؛ أوقفه للحفاظ على سجل التوزيع.", "error")
+    history = db.session.scalars(
+        select(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id)
+    ).all()
+    closed_history = [row for row in history if row.period.status == "closed"]
+    if closed_history:
+        recipient.is_active = False
+        db.session.commit()
+        flash("للمستفيد عمليات في فترات مختتمة؛ تم إيقافه وحفظ التاريخ المالي بدل حذفه.", "error")
         return redirect(url_for("operations.recipient_detail", recipient_id=recipient.id))
     name = recipient.name
+    # Actual distributions in still-open periods can be removed with the recipient;
+    # closed-period transactions remain immutable for reliable close reports.
+    for row in history:
+        db.session.delete(row)
+    db.session.flush()
     db.session.delete(recipient)
     db.session.commit()
-    flash(f"تم حذف المستفيد «{name}» نهائيًا.", "success")
+    flash(f"تم حذف المستفيد «{name}» وسجلاته من الفترات المفتوحة.", "success")
     return redirect(url_for("operations.free_distribution"))
 
 
