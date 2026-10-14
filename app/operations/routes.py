@@ -690,6 +690,15 @@ def period_detail(period_id):
             "paid": Decimal("0.00"),
         })
         item["paid"] += Decimal(str(row.amount))
+    # Include parties with older unpaid balances even when they had no movement in this period.
+    for party in db.session.scalars(select(Party).where(Party.is_active.is_(True))).all():
+        parties.setdefault(party.id, {
+            "party": party,
+            "party_type": party.party_type,
+            "quantity": Decimal("0.000"),
+            "issued": Decimal("0.00"),
+            "paid": Decimal("0.00"),
+        })
     for party_id, item in parties.items():
         entries = db.session.scalars(select(PartyLedgerEntry).where(
             PartyLedgerEntry.party_id == party_id,
