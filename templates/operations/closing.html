@@ -1,0 +1,104 @@
+{% extends "layouts/base.html" %}
+{% block title %}إقفال الفترة والتسليم{% endblock %}
+{% block page_heading %}إقفال الفترة{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">الإنتاج والتسليم</p><h1>إقفال الفترة والتسليم</h1><p class="heading-subtitle">تتم مقارنة الإنتاج والتوزيع المجاني والمدفوع والتالف والمتبقي، ثم مطابقة النقدية مع البيع المتوقع.</p></div>
+ <button class="secondary-button" type="button" onclick="window.print()">طباعة التقرير</button>
+</section>
+<form class="content-card report-filter-form" method="get" action="{{ url_for('operations.closing') }}">
+ <div class="form-row">
+  <div class="form-field"><label class="field-label" for="closing-date">التاريخ</label><input class="form-control" id="closing-date" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
+  <div class="form-field"><label class="field-label" for="closing-period">الفترة</label><select class="form-control" id="closing-period" name="period_code" data-searchable="true">{% for code,label in period_choices %}<option value="{{ code }}" {% if code == selected_code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+ </div><button class="secondary-button" type="submit">عرض الفترة</button>
+</form>
+
+<section class="content-card production-period-banner">
+ <div class="production-period-mark">✓</div><div class="production-period-copy"><strong>{{ selected_period_label }} · {{ selected_date.isoformat() }}</strong>
+ {% if period %}<p>حالة الفترة: <span class="status-badge {% if period.status == 'open' %}status-primary{% else %}status-muted{% endif %}">{{ 'مفتوحة للإقفال' if period.status == 'open' else 'مختتمة نهائيًا' }}</span></p>{% else %}<p>لا توجد فترة مسجلة لهذا التاريخ. سجّل الإنتاج أو عملية للفترة أولًا.</p>{% endif %}</div>
+</section>
+
+{% if period and period.status == 'closed' %}
+<section class="content-card">
+ <div class="section-title"><div><h2>تقرير الإقفال المحفوظ</h2><p>هذه الفترة محفوظة ولا يمكن إقفالها مرة أخرى.</p></div></div>
+ <div class="report-totals-grid">
+  <div><small>قيمة البيع المباشر المتوقعة</small><strong>{{ "{:,.2f}".format(handover.calculated_expected_amount) }} ريال</strong></div>
+  <div><small>المبلغ المستلم</small><strong>{{ "{:,.2f}".format(handover.received_amount) }} ريال</strong></div>
+  <div><small>الفرق عن المتوقع</small><strong class="{% if handover.cash_difference > 0 %}summary-red{% elif handover.cash_difference < 0 %}summary-green{% endif %}">{{ "{:,.2f}".format(handover.cash_difference) }} ريال</strong></div>
+ </div>
+ <div class="summary-line"><span>المستلم / مسؤول البيع</span><strong>{{ handover.receiver_employee.full_name }}</strong></div>
+ <div class="summary-line"><span>خرجيات الفترة</span><strong>{{ "{:,.2f}".format(handover.expenses_amount) }} ريال</strong></div>
+ <div class="summary-line"><span>المبلغ المسلم للصندوق</span><strong>{{ "{:,.2f}".format(handover.handed_to_cash_amount) }} ريال</strong></div>
+ {% if handover.statement %}<p class="heading-subtitle">{{ handover.statement }}</p>{% endif %}
+</section>
+<section class="section-title section-title-spaced"><div><h2>تفاصيل الكميات المحفوظة</h2><p>الرصيد المرحّل يصبح افتتاحية المنتج عند الإقفال اللاحق.</p></div></section>
+<section class="entity-list">
+ {% for row in closed_rows %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ row.product.name }}</h2><p>سعر البيع المباشر: {{ "{:,.2f}".format(row.shop_unit_price) }} ريال</p></div></div>
+  <div class="report-totals-grid compact"><div><small>افتتاحية</small><strong>{{ "{:,.3f}".format(row.opening_quantity) }}</strong></div><div><small>إنتاج</small><strong>{{ "{:,.3f}".format(row.produced_quantity) }}</strong></div><div><small>الصرف المدفوع</small><strong>{{ "{:,.3f}".format(row.paid_distribution_quantity) }}</strong></div><div><small>المجاني</small><strong>{{ "{:,.3f}".format(row.free_distribution_quantity) }}</strong></div><div><small>التالف</small><strong>{{ "{:,.3f}".format(row.damaged_quantity) }}</strong></div><div><small>المتبقي المرحل</small><strong>{{ "{:,.3f}".format(row.carried_quantity) }}</strong></div></div>
+  <div class="stock-balance-panel"><small>بيع المحل المحسوب</small><strong>{{ "{:,.3f}".format(row.shop_sale_quantity) }} {{ row.product.unit_label }}</strong></div>
+  <div class="entity-extra-line"><span>قيمة البيع المتوقعة</span><strong>{{ "{:,.2f}".format(row.expected_shop_sales) }} ريال</strong></div>
+ </article>
+ {% endfor %}
+</section>
+
+{% elif period and period.status == 'open' %}
+<form method="post" action="{{ url_for('operations.closing',date=selected_date.isoformat(),period_code=selected_code) }}" class="content-card closing-form">
+ {{ form.hidden_tag() }}
+ <input type="hidden" name="business_date" value="{{ selected_date.isoformat() }}">
+ <input type="hidden" name="period_code" value="{{ selected_code }}">
+ <div class="section-title"><div><h2>بيانات التسليم النقدي</h2><p>استخدم أرقام النقدية الفعلية، وتأكد أن المبلغ المسلم والخرجيات يساويان المبلغ المستلم.</p></div></div>
+ <div class="form-field">{{ form.employee_id.label(class_="field-label") }}{{ form.employee_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in form.employee_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="form-row">
+  <div class="form-field">{{ form.received_amount.label(class_="field-label") }}{{ form.received_amount(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.received_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.expenses_amount.label(class_="field-label") }}{{ form.expenses_amount(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.expenses_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ </div>
+ <div class="form-field">{{ form.handed_to_cash_amount.label(class_="field-label") }}{{ form.handed_to_cash_amount(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.handed_to_cash_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="form-field">{{ form.statement.label(class_="field-label") }}{{ form.statement(class_="form-control",rows="2",placeholder="ملاحظات عن التسليم أو فروق المبلغ") }}</div>
+
+ {% if show_details %}
+ <div class="section-title section-title-spaced"><div><h2>تفاصيل الكميات</h2><p>المتبقي والتالف يخصمان من المتاح بعد الافتتاحية والإنتاج والصرف المدفوع والمجاني.</p></div></div>
+ <div class="closing-product-list">
+ {% set display_rows = calculation.rows if calculation else base_rows %}
+ {% for row in display_rows %}
+  {% set pid = row.product_id %}
+  {% set inputs = quantity_inputs.get(pid, {}) %}
+  <article class="closing-product-card">
+   <div class="closing-product-heading"><strong>{{ row.product.name }}</strong><span>{{ row.product.unit_label }}</span></div>
+   <div class="report-totals-grid compact">
+    <div><small>الافتتاحية</small><strong>{{ "{:,.3f}".format(row.opening_quantity) }}</strong></div>
+    <div><small>إنتاج الفترة</small><strong>{{ "{:,.3f}".format(row.produced_quantity) }}</strong></div>
+    <div><small>صرف مدفوع</small><strong>{{ "{:,.3f}".format(row.paid_distribution_quantity) }}</strong></div>
+    <div><small>صرف مجاني</small><strong>{{ "{:,.3f}".format(row.free_distribution_quantity) }}</strong></div>
+    <div><small>المتاح</small><strong>{{ "{:,.3f}".format(row.available_quantity) }}</strong></div>
+   </div>
+   <div class="form-row">
+    <div class="form-field"><label class="field-label" for="damaged-{{ pid }}">الكمية التالفة</label><input class="form-control" id="damaged-{{ pid }}" name="damaged_{{ pid }}" inputmode="decimal" value="{{ inputs.get('damaged', row.damaged_quantity) }}" data-quantity-words="true" data-unit="{{ row.product.unit_label }}"></div>
+    <div class="form-field"><label class="field-label" for="carried-{{ pid }}">المتبقي للترحيل</label><input class="form-control" id="carried-{{ pid }}" name="carried_{{ pid }}" inputmode="decimal" value="{{ inputs.get('carried', row.carried_quantity) }}" data-quantity-words="true" data-unit="{{ row.product.unit_label }}"></div>
+   </div>
+   {% if calculation %}
+   <div class="report-totals-grid compact"><div><small>بيع المحل المحسوب</small><strong>{{ "{:,.3f}".format(row.shop_sale_quantity) }}</strong></div><div><small>سعر البيع</small><strong>{{ "{:,.2f}".format(row.shop_unit_price) }}</strong></div><div><small>قيمة البيع المتوقعة</small><strong>{{ "{:,.2f}".format(row.expected_shop_sales) }} ريال</strong></div></div>
+   {% endif %}
+  </article>
+ {% endfor %}
+ </div>
+ {% endif %}
+
+ {% if calculation %}
+ <section class="closing-calc-result">
+  <div><small>إجمالي البيع المباشر المتوقع</small><strong>{{ "{:,.2f}".format(calculation.expected) }} ريال</strong></div>
+  <div><small>المبلغ المستلم</small><strong>{{ "{:,.2f}".format(calculation.received) }} ريال</strong></div>
+  <div><small>الفرق عن المتوقع</small><strong class="{% if calculation.difference > 0 %}summary-red{% elif calculation.difference < 0 %}summary-green{% endif %}">{{ "{:,.2f}".format(calculation.difference) }} ريال</strong></div>
+  <p>الفرق يعرض قيمة متوقعة ناقص المبلغ المستلم، ولا يفترض وحده أن كامل قيمة البيع مفقودة.</p>
+ </section>
+ {% endif %}
+
+ <div class="dialog-actions">
+  {% if not show_details %}<button class="primary-button button-wide" name="action" value="details" type="submit" data-loading-label="جارٍ احتساب الكميات...">احتساب</button>
+  {% elif not calculation %}<button class="primary-button button-wide" name="action" value="calculate" type="submit" data-loading-label="جارٍ حساب التقرير...">حساب تقرير الفترة</button>
+  {% else %}<button class="primary-button button-wide" name="action" value="close" type="submit" data-loading-label="جارٍ إقفال الفترة...">اعتماد الإقفال والتسليم</button>{% endif %}
+ </div>
+</form>
+{% endif %}
+{% endblock %}
