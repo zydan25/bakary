@@ -112,6 +112,38 @@
         </section>
         {% endif %}
 
+        {% if current_user.has_permission('inventory.view') or current_user.has_permission('inventory.manage') %}
+        <section class="tree-section" data-nav-section="inventory">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">▤</span><span class="tree-heading-title">المخزون والمواد الخام</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            <a class="tree-link" data-nav-link href="{{ url_for('inventory.index') }}"><span class="child-symbol">▤</span><span>المواد الخام</span></a>
+            {% if current_user.has_permission('inventory.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('inventory.index', action='new') }}"><span class="child-symbol">＋</span><span>إضافة مادة خام</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('inventory.stock', kind='opening_balance') }}"><span class="child-symbol">＋</span><span>رصيد افتتاحي</span></a>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
+
+        {% if current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
+        <section class="tree-section" data-nav-section="production">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">♨</span><span class="tree-heading-title">العجنات والإنتاج</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            <a class="tree-link" data-nav-link href="{{ url_for('production.index') }}"><span class="child-symbol">♨</span><span>سجل الإنتاج</span></a>
+            {% if current_user.has_permission('production.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('production.index', action='batch') }}"><span class="child-symbol">＋</span><span>تسجيل عجنة</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('production.index', action='flour') }}"><span class="child-symbol">▤</span><span>إجمالي الدقيق للفترة</span></a>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
+
         <section class="tree-section" data-nav-section="access">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
             <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
