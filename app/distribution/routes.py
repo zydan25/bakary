@@ -601,6 +601,8 @@ def issue_records():
         selected_period_id=selected_period_id,
         query_text=query_text,
         party_type=party_type,
+        period_label=period_label,
+        period_day_name=period_day_name,
     )
 
 
@@ -647,6 +649,8 @@ def payment_records():
         selected_period_id=selected_period_id,
         query_text=query_text,
         party_type=party_type,
+        period_label=period_label,
+        period_day_name=period_day_name,
     )
 
 
@@ -727,7 +731,7 @@ def edit_issue(issue_id):
             except Exception:
                 db.session.rollback()
                 flash("تعذر تعديل الصرف؛ لم يتم حفظ أي تغيير.", "error")
-    return render_template("distribution/issue_edit.html", form=form, issue=issue, period=period)
+    return render_template("distribution/issue_edit.html", form=form, issue=issue, period=period, period_label=period_label, period_day_name=period_day_name)
 
 
 @distribution_bp.post("/issues/<int:issue_id>/delete")
@@ -850,7 +854,7 @@ def edit_payment(payment_id):
             except Exception:
                 db.session.rollback()
                 flash("تعذر تعديل الدفعة؛ لم يتم حفظ أي تغيير.", "error")
-    return render_template("distribution/payment_edit.html", form=form, payment=payment, period=period)
+    return render_template("distribution/payment_edit.html", form=form, payment=payment, period=period, period_label=period_label, period_day_name=period_day_name)
 
 
 @distribution_bp.post("/payments/<int:payment_id>/delete")
