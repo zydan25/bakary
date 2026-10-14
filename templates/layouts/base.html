@@ -156,6 +156,22 @@
           <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="child-symbol">✓</span><span>التقرير والتسليم النقدي</span></a></div>
         </section>
         {% endif %}
+        {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') or current_user.has_permission('cash.accounts.manage') %}
+        <section class="tree-section" data-nav-section="finance">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">ر.ي</span><span class="tree-heading-title">الصندوق والحسابات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
+          <div class="tree-children" hidden>
+            {% if current_user.has_permission('finance.view') or current_user.has_permission('cash.accounts.manage') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('finance.index') }}"><span class="child-symbol">ر.ي</span><span>الأرصدة والحركات</span></a>
+            {% endif %}
+            {% if current_user.has_permission('expenses.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('finance.expenses') }}"><span class="child-symbol">−</span><span>المصروفات</span></a>
+            {% endif %}
+            {% if current_user.has_permission('finance.manage') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('finance.transfers') }}"><span class="child-symbol">⇄</span><span>التحويلات الداخلية</span></a>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
         {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
         <section class="tree-section" data-nav-section="staff">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♙</span><span class="tree-heading-title">الموظفون والصلاحيات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
