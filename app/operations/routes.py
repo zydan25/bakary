@@ -82,6 +82,7 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         period = next((row for row in open_periods if row.business_date == selected_date and row.period_code == selected_code), None)
     if period is None and open_periods:
         period = open_periods[0]
+    if period is not None:
         selected_date, selected_code = period.business_date, period.period_code
     records = []
     if period:
