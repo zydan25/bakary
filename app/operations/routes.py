@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -28,7 +28,7 @@ from app.services.closing import (
     preview_raw_material_balances,
     calculate_raw_material_close_rows,
 )
-from app.services.periods import PeriodRuleError, get_or_create_open_period, period_label, period_mode, suggested_period_code
+from app.services.periods import PeriodRuleError, get_or_create_open_period, period_label, period_mode, suggested_period_code, selectable_open_periods, period_option_label, period_day_name
 
 
 def _require(permission):
@@ -54,7 +54,7 @@ def _clean_period_code(value):
     return value if value in codes else suggested_period_code()
 
 
-def _free_context(*, recipient_form=None, issue_form=None, action=None, selected_date=None, selected_code=None):
+def _free_context(*, recipient_form=None, issue_form=None, action=None, selected_date=None, selected_code=None, editing_recipient=None):
     selected_date = selected_date or _parse_date(request.args.get("date") or request.form.get("business_date"))
     selected_code = _clean_period_code(selected_code or request.args.get("period_code") or request.form.get("period_code"))
     recipients = db.session.scalars(
@@ -83,7 +83,6 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     issue_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
     issue_form.period_code.choices = _period_choices()
     recipient_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
-    recipient_form.period_code.choices = _period_choices()
     default_product = next((row for row in products if row.is_default), products[0] if products else None)
     requested_recipient_id = request.args.get("recipient_id", type=int)
     if request.method == "GET":
@@ -91,10 +90,13 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         issue_form.business_date.data = selected_date
         issue_form.period_code.data = selected_code
         recipient_form.product_id.data = default_product.id if default_product else 0
-        recipient_form.business_date.data = selected_date
-        recipient_form.period_code.data = selected_code
+        if editing_recipient is not None:
+            recipient_form.name.data = editing_recipient.name
+            recipient_form.notes.data = editing_recipient.notes or ""
+            recipient_form.product_id.data = editing_recipient.default_product_id or (default_product.id if default_product else 0)
+            recipient_form.quantity.data = editing_recipient.daily_quantity
 
-        # Prefill a recipient's next issue from their previous quantity and product.
+        # Prefill from the current period record or the recipient's expected daily target.
         if requested_recipient_id:
             latest_issue = db.session.scalar(
                 select(FreeDistribution)
@@ -106,12 +108,19 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
                 (row for row in records if row.recipient_id == requested_recipient_id),
                 None,
             )
+            target_recipient = db.session.get(FreeRecipient, requested_recipient_id)
             preferred_issue = current_recipient_issue or latest_issue
-            if preferred_issue and any(row.id == preferred_issue.product_id for row in products):
-                issue_form.product_id.data = preferred_issue.product_id
-            else:
-                issue_form.product_id.data = default_product.id if default_product else 0
-            issue_form.quantity.data = preferred_issue.quantity if preferred_issue else None
+            preferred_product_id = (
+                current_recipient_issue.product_id if current_recipient_issue
+                else (target_recipient.default_product_id if target_recipient and target_recipient.default_product_id
+                      else (preferred_issue.product_id if preferred_issue else (default_product.id if default_product else 0)))
+            )
+            issue_form.product_id.data = preferred_product_id
+            issue_form.quantity.data = (
+                current_recipient_issue.quantity if current_recipient_issue
+                else (target_recipient.daily_quantity if target_recipient else (preferred_issue.quantity if preferred_issue else None))
+            )
+
         else:
             issue_form.product_id.data = default_product.id if default_product else 0
             issue_form.quantity.data = None
@@ -140,8 +149,23 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         issue_form=issue_form,
         selected_recipient=selected_recipient,
         selected_issue_product=selected_product,
-        show_recipient_form=action == "recipient" or (recipient_form is not None and bool(recipient_form.errors)),
-        show_issue_form=action == "issue" or (issue_form is not None and bool(issue_form.errors)),
+        editing_recipient=editing_recipient,
+        expected_total=sum((row.daily_quantity for row in active_recipients), Decimal("0.000")),
+        distributed_total=sum((row.quantity for row in records), Decimal("0.000")),
+        target_rows=[
+            {
+                "product": product,
+                "expected": sum((row.daily_quantity for row in active_recipients if row.default_product_id == product.id), Decimal("0.000")),
+                "distributed": sum((row.quantity for row in records if row.product_id == product.id), Decimal("0.000")),
+            }
+            for product in products
+            if any(row.default_product_id == product.id and row.daily_quantity > 0 for row in active_recipients)
+            or any(row.product_id == product.id for row in records)
+        ],
+        period_day_name=period_day_name,
+        period_option_label=period_option_label,
+        show_recipient_form=action in {"recipient", "edit_recipient"} or bool(recipient_form.errors),
+        show_issue_form=action == "issue" or bool(issue_form.errors),
     )
 
 
@@ -161,58 +185,96 @@ def create_free_recipient():
         select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
     ).all()
     form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
-    form.period_code.choices = _period_choices()
     if form.validate_on_submit():
-        try:
-            product = db.session.scalar(
-                select(Product).where(Product.id == form.product_id.data, Product.is_active.is_(True))
-            )
-            if product is None:
-                raise ValueError("الصنف غير موجود أو موقوف.")
-            period, _created = get_or_create_open_period(
-                business_date=form.business_date.data,
-                period_code=form.period_code.data,
-                actor_id=current_user.id,
-            )
+        product = db.session.scalar(select(Product).where(
+            Product.id == form.product_id.data, Product.is_active.is_(True)
+        ))
+        if product is None:
+            flash("الصنف غير موجود أو موقوف.", "error")
+        else:
             recipient = FreeRecipient(
                 name=form.name.data.strip(),
                 notes=(form.notes.data or "").strip() or None,
+                default_product_id=product.id,
+                daily_quantity=form.quantity.data,
                 is_active=True,
                 created_by_id=current_user.id,
             )
             db.session.add(recipient)
-            db.session.flush()
-            issue = FreeDistribution(
-                period_id=period.id,
-                recipient_id=recipient.id,
-                product_id=product.id,
-                quantity=form.quantity.data,
-                statement="صرف مجاني عند إضافة المستفيد",
-                created_by_id=current_user.id,
-            )
-            db.session.add(issue)
             db.session.commit()
-            flash("تمت إضافة المستفيد وتسجيل الكمية المصروفة ضمن الفترة المحددة.", "success")
-            return redirect(url_for(
-                "operations.free_distribution",
-                date=form.business_date.data.isoformat(),
-                period_code=form.period_code.data,
-            ))
-        except (PeriodRuleError, ValueError) as exc:
-            db.session.rollback()
-            flash(str(exc), "error")
-        except IntegrityError:
-            db.session.rollback()
-            flash("تعذر تسجيل المستفيد والصرف؛ لم يتم اعتماد العملية.", "error")
-        except Exception:
-            db.session.rollback()
-            flash("تعذر إضافة المستفيد والصرف المجاني. لم يتم تأكيد الحفظ.", "error")
-    return _free_context(
-        recipient_form=form,
-        action="recipient",
-        selected_date=form.business_date.data,
-        selected_code=form.period_code.data,
+            flash("تم حفظ المستفيد والهدف اليومي. سجّل الصرف الفعلي من زر الصرف.", "success")
+            return redirect(url_for("operations.recipient_detail", recipient_id=recipient.id))
+    return _free_context(recipient_form=form, action="recipient")
+
+
+@operations_bp.get("/free-recipients/<int:recipient_id>")
+@login_required
+def recipient_detail(recipient_id):
+    _require("free_distribution.manage")
+    recipient = db.session.get(FreeRecipient, recipient_id)
+    if recipient is None:
+        abort(404)
+    history = db.session.scalars(
+        select(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id)
+        .order_by(FreeDistribution.created_at.desc(), FreeDistribution.id.desc())
+    ).all()
+    total = sum((Decimal(str(row.quantity)) for row in history), Decimal("0.000"))
+    return render_template(
+        "operations/recipient_detail.html",
+        recipient=recipient,
+        history=history,
+        total_quantity=total,
+        period_label=period_label,
     )
+
+
+@operations_bp.route("/free-recipients/<int:recipient_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_free_recipient(recipient_id):
+    _require("free_distribution.manage")
+    recipient = db.session.get(FreeRecipient, recipient_id)
+    if recipient is None:
+        abort(404)
+    form = FreeRecipientForm()
+    products = db.session.scalars(
+        select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
+    ).all()
+    form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
+    if request.method == "POST" and form.validate_on_submit():
+        product = db.session.scalar(select(Product).where(
+            Product.id == form.product_id.data, Product.is_active.is_(True)
+        ))
+        if product is None:
+            flash("الصنف غير موجود أو موقوف.", "error")
+        else:
+            recipient.name = form.name.data.strip()
+            recipient.notes = (form.notes.data or "").strip() or None
+            recipient.default_product_id = product.id
+            recipient.daily_quantity = form.quantity.data
+            db.session.commit()
+            flash("تم تحديث بيانات المستفيد والكمية اليومية المتوقعة.", "success")
+            return redirect(url_for("operations.recipient_detail", recipient_id=recipient.id))
+    return _free_context(recipient_form=form, action="edit_recipient", editing_recipient=recipient)
+
+
+@operations_bp.post("/free-recipients/<int:recipient_id>/delete")
+@login_required
+def delete_free_recipient(recipient_id):
+    _require("free_distribution.manage")
+    recipient = db.session.get(FreeRecipient, recipient_id)
+    if recipient is None:
+        abort(404)
+    history_count = db.session.scalar(
+        select(func.count()).select_from(FreeDistribution).where(FreeDistribution.recipient_id == recipient.id)
+    ) or 0
+    if history_count:
+        flash("لا يمكن حذف المستفيد نهائيًا لارتباطه بسجلات صرف سابقة؛ أوقفه للحفاظ على سجل التوزيع.", "error")
+        return redirect(url_for("operations.recipient_detail", recipient_id=recipient.id))
+    name = recipient.name
+    db.session.delete(recipient)
+    db.session.commit()
+    flash(f"تم حذف المستفيد «{name}» نهائيًا.", "success")
+    return redirect(url_for("operations.free_distribution"))
 
 
 @operations_bp.post("/free-recipients/<int:recipient_id>/toggle")
