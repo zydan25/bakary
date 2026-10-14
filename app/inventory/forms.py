@@ -53,6 +53,13 @@ class StockMovementForm(FlaskForm):
             NumberRange(min=Decimal("0.001"), message="يجب أن تكون الكمية أكبر من صفر."),
         ],
     )
+    unit_cost = DecimalField(
+        "تكلفة الوحدة الواحدة (اختياري)",
+        places=2,
+        validators=[
+            NumberRange(min=Decimal("0"), message="تكلفة الوحدة لا يمكن أن تكون سالبة."),
+        ],
+    )
     business_date = DateField(
         "تاريخ الحركة",
         format="%Y-%m-%d",
