@@ -1,6 +1,7 @@
 """Validated dough-batch and aggregate flour usage forms."""
 
 from datetime import date
+from app.services.clock import business_today
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
@@ -42,7 +43,7 @@ class DoughBatchForm(FlaskForm):
     business_date = DateField(
         "تاريخ الإنتاج",
         format="%Y-%m-%d",
-        default=date.today,
+        default=business_today,
         validators=[DataRequired(message="تاريخ الإنتاج مطلوب.")],
     )
     period_code = SelectField(
@@ -70,7 +71,7 @@ class PeriodFlourForm(FlaskForm):
     business_date = DateField(
         "تاريخ الإنتاج",
         format="%Y-%m-%d",
-        default=date.today,
+        default=business_today,
         validators=[DataRequired(message="تاريخ الإنتاج مطلوب.")],
     )
     period_code = SelectField(
