@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+{% block title %}ملف {{ employee.full_name }}{% endblock %}
+{% block page_heading %}ملف الموظف{% endblock %}
+{% block content %}
+<section class="page-heading-row"><div><p class="eyebrow">إدارة الفريق</p><h1>{{ employee.full_name }}</h1><p class="heading-subtitle">{{ employee.job_title or 'موظف' }} · {{ employee.phone or 'لا يوجد هاتف' }}</p></div>
+<div class="heading-actions"><a class="secondary-button" href="{{ url_for('staff.employees') }}">الموظفون</a><a class="primary-button" href="{{ url_for('staff.employees',action='edit',edit=employee.id) }}">تعديل الموظف والصلاحيات</a></div></section>
+<section class="report-totals-grid">
+ <div><small>الحالة</small><strong>{{ 'نشط' if employee.is_active else 'موقوف' }}</strong></div>
+ <div><small>حساب الدخول</small><strong>{{ 'مرتبط' if employee.user else 'غير مرتبط' }}</strong></div>
+ <div><small>أدوار الدخول</small><strong>{{ employee.user.roles|length if employee.user else 0 }}</strong></div>
+ <div><small>عمليات هذا الموظف</small><strong>{{ issues|length + payments|length + free_rows|length + batches|length }}</strong></div>
+</section>
+{% if employee.notes %}<section class="content-card"><h2>ملاحظات</h2><p>{{ employee.notes }}</p></section>{% endif %}
+<section class="content-card"><div class="section-title"><div><h2>عمليات الصرف</h2><p>الحركات التي سجلها حساب الموظف.</p></div></div>
+{% for row in issues %}<div class="product-history-row"><div><strong>{{ row.party.name }} · {{ row.product.name }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.quantity }} {{ row.product.unit_label }}</small></div><strong>{{ "{:,.2f}".format(row.total_amount) }} ريال</strong></div>{% else %}<p class="product-muted-empty">لا توجد عمليات صرف مسجلة.</p>{% endfor %}</section>
+<section class="content-card"><div class="section-title"><div><h2>عمليات الدفع</h2></div></div>
+{% for row in payments %}<div class="product-history-row"><div><strong>{{ row.party.name }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.statement or '' }}</small></div><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>{% else %}<p class="product-muted-empty">لا توجد عمليات دفع مسجلة.</p>{% endfor %}</section>
+<section class="content-card"><div class="section-title"><div><h2>التوزيع المجاني</h2></div></div>
+{% for row in free_rows %}<div class="product-history-row"><div><strong>{{ row.recipient.name }} · {{ row.product.name }}</strong><small>{{ row.period.business_date.isoformat() }}</small></div><strong>{{ "{:,.3f}".format(row.quantity) }} {{ row.product.unit_label }}</strong></div>{% else %}<p class="product-muted-empty">لا توجد عمليات توزيع مجاني مسجلة.</p>{% endfor %}</section>
+<section class="content-card"><div class="section-title"><div><h2>الإنتاج</h2></div></div>
+{% for row in batches %}<div class="product-history-row"><div><strong>{{ row.product.name }}</strong><small>{{ row.period.business_date.isoformat() }} · {{ row.period.period_code }}</small></div><strong>{{ "{:,.3f}".format(row.produced_quantity) }} {{ row.product.unit_label }}</strong></div>{% else %}<p class="product-muted-empty">لا توجد سجلات إنتاج لهذا الموظف.</p>{% endfor %}</section>
+<section class="content-card"><div class="section-title"><div><h2>الإقفال والتسليم</h2></div></div>
+{% for row in handovers %}<div class="product-history-row"><div><strong>{{ row.period.business_date.isoformat() }} · {{ row.period.period_code }}</strong><small>{{ row.confirmed_at.strftime('%Y-%m-%d %H:%M') if row.confirmed_at else '' }}</small></div><strong>{{ "{:,.2f}".format(row.handed_to_cash_amount) }} ريال للصندوق</strong></div>{% else %}<p class="product-muted-empty">لا توجد عمليات تسليم مسجلة لهذا الموظف.</p>{% endfor %}</section>
+{% endblock %}
