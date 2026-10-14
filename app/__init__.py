@@ -92,7 +92,13 @@ def create_app(config_name=None, test_config=None):
                 name = "نظام إدارة المخبز"
         except Exception:
             name = "نظام إدارة المخبز"
-        return {"bakery_business_name": name}
+        bottom_setting = None
+        try:
+            bottom_setting = db.session.query(models.Setting).filter_by(key="show_bottom_nav").first()
+        except Exception:
+            bottom_setting = None
+        show_bottom_nav = bottom_setting.value is not False if bottom_setting is not None else True
+        return {"bakery_business_name": name, "show_bottom_nav": show_bottom_nav}
 
     @app.before_request
     def require_first_password_change():
