@@ -20,6 +20,39 @@
  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الإعدادات...">حفظ الإعدادات</button></div>
 </form>
 
+<section class="content-card dashboard-action-settings pwa-settings-card">
+ <div class="section-title"><div><h2>اسم التطبيق وأيقونة التثبيت</h2><p>تحكّم بالاسم الذي يظهر أسفل أيقونة التطبيق عند تثبيته على الهاتف، واختر أيقونة خاصة بك. لا يؤثر ذلك على بيانات المخبز.</p></div></div>
+ <form method="post" enctype="multipart/form-data" class="form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save_pwa_settings">
+  <div class="form-field">
+   <label class="field-label" for="pwa-app-name">اسم التطبيق عند التثبيت</label>
+   <input class="form-control" id="pwa-app-name" name="pwa_app_name" value="{{ pwa_app_name }}" maxlength="80" required placeholder="مثال: مخبز الأمل">
+   <small class="subtle-hint">الاسم الكامل الذي يظهر في تفاصيل التطبيق وقائمة التطبيقات.</small>
+  </div>
+  <div class="form-field">
+   <label class="field-label" for="pwa-app-short-name">الاسم المختصر أسفل الأيقونة</label>
+   <input class="form-control" id="pwa-app-short-name" name="pwa_app_short_name" value="{{ pwa_app_short_name }}" maxlength="20" placeholder="يُشتق من الاسم الكامل إذا تركته فارغًا">
+   <small class="subtle-hint">يظهر هذا الاسم عادةً على الشاشة الرئيسية للهاتف. عند تركه فارغًا، سيُشتق تلقائيًا من الاسم الكامل.</small>
+  </div>
+  <div class="pwa-icon-picker">
+   <div class="pwa-icon-preview"><img src="{{ pwa_icon_url }}" alt="أيقونة التطبيق الحالية" width="76" height="76"><span>الأيقونة الحالية</span></div>
+   <div class="form-field pwa-icon-file-field">
+    <label class="field-label" for="pwa-app-icon">تغيير أيقونة التثبيت</label>
+    <input class="form-control" id="pwa-app-icon" name="app_icon" type="file" accept="image/png,image/jpeg,image/webp">
+    <small class="subtle-hint">ارفع صورة PNG أو JPG أو WEBP بحجم لا يتجاوز 3 ميجابايت. سيجهّز النظام منها المقاسين المناسبين للتثبيت.</small>
+   </div>
+  </div>
+  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ إعدادات التطبيق...">حفظ اسم التطبيق والأيقونة</button></div>
+ </form>
+ <form method="post" class="pwa-restore-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="restore_pwa_defaults">
+  <div class="pwa-restore-copy"><strong>استعادة الإعدادات الافتراضية</strong><small>يعيد الاسم الافتراضي المرتبط باسم المنشأة ويستعيد الأيقونة الأصلية الحالية (Bakary SVG).</small></div>
+  <button type="submit" class="secondary-button">استعادة الافتراضي</button>
+ </form>
+</section>
+
 <section class="content-card dashboard-action-settings">
  <div class="section-title"><div><h2>تصميم بطاقات الصفحة الرئيسية</h2><p>اختر مظهر بطاقات وحدات النظام. التصميم الحالي هو الافتراضي ولن يتغير ما لم تختَر التصميم الجديد.</p></div></div>
  <form method="post" class="form-stack">
