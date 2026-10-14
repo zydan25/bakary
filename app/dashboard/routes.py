@@ -45,8 +45,17 @@ def index():
         action for action in configured
         if action["enabled"] and _can_open_shortcut(action["url"].split("?", 1)[0])
     ]
+    theme_setting = db.session.scalar(
+        select(Setting).where(Setting.key == "dashboard_card_theme")
+    )
+    dashboard_card_theme = (
+        theme_setting.value
+        if theme_setting is not None and theme_setting.value in {"current", "water_pos"}
+        else "current"
+    )
     return render_template(
         "dashboard/index.html",
         role_names=role_names,
         quick_actions=quick_actions,
+        dashboard_card_theme=dashboard_card_theme,
     )
