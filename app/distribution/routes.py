@@ -28,7 +28,7 @@ from app.services.periods import PeriodRuleError, get_or_create_open_period, per
 
 
 PARTY_LABELS = {
-    "distributor": {"title": "صرف موزع", "plural": "الموزعون", "singular": "الموزع"},
+    "distributor": {"title": "صرف موزع", "plural": "الموزعون", "plural_genitive": "الموزعين", "singular": "الموزع"},
     "customer": {"title": "صرف عميل", "plural": "العملاء والنقاط", "singular": "العميل"},
 }
 
