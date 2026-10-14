@@ -71,6 +71,8 @@ def employees():
                     )
                     if already_linked is not None:
                         form.phone.errors.append("حساب الدخول مرتبط بملف موظف آخر.")
+                    elif any(role.code == "owner" for role in account_for_phone.roles):
+                        form.phone.errors.append("لا يمكن ربط حساب المدير الرئيسي بملف موظف؛ اختر رقمًا آخر.")
                 role_codes = list(dict.fromkeys(request.form.getlist("role_codes")))
                 role_map = {
                     role.code: role
