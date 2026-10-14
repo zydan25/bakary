@@ -156,3 +156,79 @@ def register_stock_movement(
     except Exception:
         db.session.rollback()
         raise
+
+
+
+def inventory_valuation(item_id):
+    """Return an estimated moving-average stock valuation from the immutable ledger.
+
+    Value is intentionally reported as unknown if any still-relevant incoming stock
+    has no unit cost. When quantity returns to zero, the unknown historical cost
+    no longer affects the value of stock subsequently received.
+    """
+    from app.models.inventory import InventoryItem
+
+    item = db.session.get(InventoryItem, item_id)
+    if item is None:
+        raise InventoryRuleError("المادة غير موجودة.")
+
+    movements = db.session.scalars(
+        select(InventoryMovement)
+        .where(InventoryMovement.item_id == item_id)
+        .order_by(
+            InventoryMovement.business_date.asc(),
+            InventoryMovement.created_at.asc(),
+            InventoryMovement.id.asc(),
+        )
+    ).all()
+
+    quantity = Decimal("0.000")
+    value = Decimal("0.00")
+    cost_known = True
+    cent = Decimal("0.01")
+
+    for movement in movements:
+        qty = Decimal(str(movement.quantity))
+        if movement.direction == "in":
+            if movement.unit_cost is None:
+                cost_known = False
+            elif cost_known:
+                value += qty * Decimal(str(movement.unit_cost))
+        else:
+            if cost_known and quantity > 0:
+                average = value / quantity
+                value -= qty * average
+            quantity -= qty
+            if quantity <= 0:
+                quantity = Decimal("0.000")
+                value = Decimal("0.00")
+                cost_known = True
+
+        if movement.direction == "in":
+            quantity += qty
+
+    balance = inventory_balance(item_id)
+    if balance <= 0:
+        return {
+            "quantity": balance,
+            "average_unit_cost": None,
+            "stock_value": Decimal("0.00"),
+            "is_valued": True,
+        }
+
+    if not cost_known or quantity <= 0:
+        return {
+            "quantity": balance,
+            "average_unit_cost": None,
+            "stock_value": None,
+            "is_valued": False,
+        }
+
+    average = (value / quantity).quantize(cent, rounding=ROUND_HALF_UP)
+    stock_value = (balance * average).quantize(cent, rounding=ROUND_HALF_UP)
+    return {
+        "quantity": balance,
+        "average_unit_cost": average,
+        "stock_value": stock_value,
+        "is_valued": True,
+    }
