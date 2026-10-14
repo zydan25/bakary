@@ -4,7 +4,7 @@ import re
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.extensions import db
 from app.models.employee import Employee
@@ -131,7 +131,7 @@ def employees():
     if query:
         needle = "%" + query + "%"
         stmt = stmt.where(
-            db.or_(
+            or_(
                 Employee.full_name.ilike(needle),
                 Employee.phone.ilike(needle),
                 Employee.job_title.ilike(needle),
