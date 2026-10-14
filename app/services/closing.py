@@ -1,6 +1,6 @@
 """Calculated bakery-period close and cash handover transactions."""
 
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from sqlalchemy import and_, case, func, or_, select
@@ -16,7 +16,6 @@ from app.models.free_distribution import FreeDistribution
 from app.models.party import Party
 from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
-from app.models.base import utc_now
 
 
 QTY = Decimal("0.001")
@@ -246,7 +245,6 @@ def close_period_with_handover(
                 shop_sale_quantity=row["shop_sale_quantity"],
                 shop_unit_price=row["shop_unit_price"],
                 expected_shop_sales=row["expected_shop_sales"],
-                statement=(statement or "").strip() or None,
                 created_by_id=actor_id,
             ))
         handover = PeriodHandover(
@@ -300,7 +298,7 @@ def close_period_with_handover(
             ))
 
         period.status = "closed"
-        period.closed_at = utc_now()
+        period.closed_at = datetime.now(timezone.utc)
         period.closed_by_id = actor_id
         db.session.commit()
         return handover, rows, expected
