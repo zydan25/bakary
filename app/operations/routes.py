@@ -551,6 +551,38 @@ def _period_report_permission():
         abort(403)
 
 
+@operations_bp.get("/periods/current")
+@login_required
+def current_period():
+    _period_report_permission()
+    today = business_today()
+    code = suggested_period_code()
+    period = db.session.scalar(select(BusinessPeriod).where(
+        BusinessPeriod.business_date == today,
+        BusinessPeriod.period_code == code,
+    ))
+    if period is None:
+        try:
+            period, _created = get_or_create_open_period(
+                business_date=today,
+                period_code=code,
+                actor_id=current_user.id,
+            )
+        except PeriodRuleError:
+            period = None
+    if period is None:
+        period = db.session.scalar(
+            select(BusinessPeriod).order_by(
+                BusinessPeriod.business_date.desc(),
+                BusinessPeriod.opened_at.desc(),
+                BusinessPeriod.id.desc(),
+            ).limit(1)
+        )
+    if period is not None:
+        return redirect(url_for("operations.period_detail", period_id=period.id))
+    return redirect(url_for("operations.periods_report"))
+
+
 @operations_bp.get("/periods/")
 @login_required
 def periods_report():
