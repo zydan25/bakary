@@ -13,6 +13,7 @@ from app.distribution import distribution_bp
 from app.distribution.forms import IssueForm, PaymentForm
 from app.extensions import db
 from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
+from app.models.production import BusinessPeriod
 from app.models.party import Party
 from app.models.product import Product
 from app.services.amount_words import amount_to_arabic_words, quantity_to_arabic_words
@@ -25,7 +26,7 @@ from app.services.ledger import (
     party_balance,
     party_period_summary,
 )
-from app.services.periods import PeriodRuleError, get_or_create_open_period, period_label, suggested_period_code
+from app.services.periods import PeriodRuleError, get_or_create_open_period, period_label, suggested_period_code, selectable_open_periods, period_option_label, period_day_name
 
 
 PARTY_LABELS = {
@@ -81,39 +82,58 @@ def _parse_date(value, fallback):
 def issue(party_type):
     meta = _valid_party_type(party_type)
     _require("distribution.issue")
-
     form = IssueForm()
     party_choices, parties = _party_choices(party_type)
     product_choices, products = _product_choices()
+    periods = selectable_open_periods(actor_id=current_user.id)
     form.party_id.choices = party_choices
     form.product_id.choices = product_choices
+    form.period_id.choices = [(row.id, period_option_label(row)) for row in periods]
 
     requested_party_id = request.args.get("party_id", type=int)
     if request.method == "GET":
-        if requested_party_id and any(p.id == requested_party_id for p in parties):
-            form.party_id.data = requested_party_id
-        else:
-            form.party_id.data = 0
+        form.party_id.data = requested_party_id if requested_party_id and any(p.id == requested_party_id for p in parties) else 0
         default_product = next((p for p in products if p.is_default), products[0] if products else None)
         form.product_id.data = default_product.id if default_product else 0
         form.quantity.data = None
-        form.business_date.data = business_today()
+        form.period_id.data = periods[0].id if periods else 0
         form.request_key.data = uuid4().hex
-    elif not form.request_key.data:
-        form.request_key.data = uuid4().hex
+    else:
+        if not form.request_key.data:
+            form.request_key.data = uuid4().hex
+        # Accept forms opened before the period selector rollout, but only map them to an
+        # already-open matching period. New forms post period_id directly.
+        if not request.form.get("period_id") and request.form.get("business_date"):
+            legacy_date = _parse_date(request.form.get("business_date"), business_today())
+            legacy_code = request.form.get("period_code") or suggested_period_code()
+            legacy_period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.business_date == legacy_date,
+                BusinessPeriod.period_code == legacy_code,
+                BusinessPeriod.status == "open",
+            ))
+            if legacy_period is None:
+                try:
+                    legacy_period, _created = get_or_create_open_period(
+                        business_date=legacy_date, period_code=legacy_code, actor_id=current_user.id
+                    )
+                except PeriodRuleError:
+                    legacy_period = None
+            if legacy_period:
+                form.period_id.data = legacy_period.id
 
     if request.method == "POST" and form.validate_on_submit():
         try:
-            period, _created = get_or_create_open_period(
-                business_date=form.business_date.data,
-                period_code=suggested_period_code(),
-                actor_id=current_user.id,
-            )
+            period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.id == form.period_id.data,
+                BusinessPeriod.status == "open",
+            ))
+            if period is None:
+                raise PeriodRuleError("الفترة المختارة غير مفتوحة؛ اختر فترة أخرى.")
             transaction, created = create_issue(
                 party_id=form.party_id.data,
                 product_id=form.product_id.data,
                 quantity=form.quantity.data,
-                business_date=form.business_date.data,
+                business_date=period.business_date,
                 period_code=period.period_code,
                 statement=form.statement.data,
                 actor_id=current_user.id,
@@ -135,17 +155,16 @@ def issue(party_type):
 
     chosen_party = next((p for p in parties if p.id == form.party_id.data), None)
     chosen_product = next((p for p in products if p.id == form.product_id.data), None)
+    chosen_period = next((p for p in periods if p.id == form.period_id.data), None)
     default_price = None
     last = None
     if chosen_party is not None and chosen_product is not None:
         default_price = chosen_party.price_for(chosen_product)
         last = last_issue(chosen_party.id)
-
     saved_id = request.args.get("saved", type=int)
     saved_transaction = db.session.get(DistributionIssue, saved_id) if saved_id else None
     if saved_transaction and party_type != "all" and saved_transaction.party.party_type != party_type:
         saved_transaction = None
-
     return render_template(
         "distribution/issue.html",
         party_type=party_type,
@@ -155,9 +174,11 @@ def issue(party_type):
         products=products,
         chosen_party=chosen_party,
         chosen_product=chosen_product,
+        chosen_period=chosen_period,
         default_price=default_price,
         last_issue=last,
-        period_label=period_label(suggested_period_code()),
+        period_label=period_option_label(chosen_period) if chosen_period else "لا توجد فترة مفتوحة",
+        period_day_name=period_day_name,
         saved_transaction=saved_transaction,
         show_form=True,
     )
@@ -223,19 +244,37 @@ def quote():
 def payment(party_type):
     meta = _valid_party_type(party_type)
     _require("distribution.payment")
-
     form = PaymentForm()
     choices, parties = _party_choices(party_type)
+    periods = selectable_open_periods(actor_id=current_user.id)
     form.party_id.choices = choices
-
+    form.period_id.choices = [(row.id, period_option_label(row)) for row in periods]
     requested_party_id = request.args.get("party_id", type=int)
     if request.method == "GET":
-        form.party_id.data = requested_party_id if any(p.id == requested_party_id for p in parties) else 0
+        form.party_id.data = requested_party_id if requested_party_id and any(p.id == requested_party_id for p in parties) else 0
         form.amount.data = ""
-        form.business_date.data = business_today()
+        form.period_id.data = periods[0].id if periods else 0
         form.request_key.data = uuid4().hex
-    elif not form.request_key.data:
-        form.request_key.data = uuid4().hex
+    else:
+        if not form.request_key.data:
+            form.request_key.data = uuid4().hex
+        if not request.form.get("period_id") and request.form.get("business_date"):
+            legacy_date = _parse_date(request.form.get("business_date"), business_today())
+            legacy_code = request.form.get("period_code") or suggested_period_code()
+            legacy_period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.business_date == legacy_date,
+                BusinessPeriod.period_code == legacy_code,
+                BusinessPeriod.status == "open",
+            ))
+            if legacy_period is None:
+                try:
+                    legacy_period, _created = get_or_create_open_period(
+                        business_date=legacy_date, period_code=legacy_code, actor_id=current_user.id
+                    )
+                except PeriodRuleError:
+                    legacy_period = None
+            if legacy_period:
+                form.period_id.data = legacy_period.id
 
     receipt = None
     receipt_id = request.args.get("receipt", type=int)
@@ -246,30 +285,24 @@ def payment(party_type):
             after = party_balance(saved.party_id)
             summary = party_period_summary(saved.party_id, saved.business_date, saved.business_date)
             receipt = {
-                "id": saved.id,
-                "party": saved.party,
-                "amount": saved.amount,
-                "business_date": saved.business_date,
-                "statement": saved.statement,
-                "quantity": summary["quantity"],
-                "issue_total": summary["issue_total"],
-                "balance_before": before,
-                "balance_after": after,
-                "created_at": saved.created_at,
+                "id": saved.id, "party": saved.party, "amount": saved.amount,
+                "business_date": saved.business_date, "statement": saved.statement,
+                "quantity": summary["quantity"], "issue_total": summary["issue_total"],
+                "balance_before": before, "balance_after": after, "created_at": saved.created_at,
             }
 
     if request.method == "POST" and form.validate_on_submit():
         try:
-            period, _created = get_or_create_open_period(
-                business_date=form.business_date.data,
-                period_code=suggested_period_code(),
-                actor_id=current_user.id,
-            )
-            balance_before = party_balance(form.party_id.data)
+            period = db.session.scalar(select(BusinessPeriod).where(
+                BusinessPeriod.id == form.period_id.data,
+                BusinessPeriod.status == "open",
+            ))
+            if period is None:
+                raise PeriodRuleError("الفترة المختارة غير مفتوحة؛ اختر فترة أخرى.")
             transaction, created = create_payment(
                 party_id=form.party_id.data,
                 amount=form.amount.data,
-                business_date=form.business_date.data,
+                business_date=period.business_date,
                 period_code=period.period_code,
                 statement=form.statement.data,
                 actor_id=current_user.id,
@@ -287,29 +320,24 @@ def payment(party_type):
             flash("تعذر تسجيل الدفع. لم يتم تأكيد الحفظ؛ تحقق من البيانات وحاول مجددًا.", "error")
 
     chosen_party = next((p for p in parties if p.id == form.party_id.data), None)
+    chosen_period = next((p for p in periods if p.id == form.period_id.data), None)
     payment_summary = None
-    if chosen_party:
-        summary_date = form.business_date.data or business_today()
+    if chosen_party and chosen_period:
         try:
-            period_summary = party_period_summary(chosen_party.id, summary_date, summary_date)
-            payment_summary = {
-                **period_summary,
-                "current_balance": party_balance(chosen_party.id),
-            }
+            period_summary = party_period_summary(
+                chosen_party.id, chosen_period.business_date, chosen_period.business_date
+            )
+            payment_summary = {**period_summary, "current_balance": party_balance(chosen_party.id)}
         except BusinessRuleError:
             payment_summary = None
-
     return render_template(
         "distribution/payment.html",
-        party_type=party_type,
-        meta=meta,
-        form=form,
-        parties=parties,
-        chosen_party=chosen_party,
+        party_type=party_type, meta=meta, form=form, parties=parties,
+        chosen_party=chosen_party, chosen_period=chosen_period,
         payment_summary=payment_summary,
-        period_label=period_label(suggested_period_code()),
-        receipt=receipt,
-        show_form=True,
+        period_label=period_option_label(chosen_period) if chosen_period else "لا توجد فترة مفتوحة",
+        period_day_name=period_day_name,
+        receipt=receipt, show_form=True,
     )
 
 
