@@ -24,6 +24,7 @@ class DistributionIssue(TimestampMixin, db.Model):
     __table_args__ = (
         CheckConstraint("quantity > 0", name="quantity_positive"),
         CheckConstraint("unit_price >= 0 AND total_amount >= 0", name="amounts_nonnegative"),
+        UniqueConstraint("request_key", name="uq_distribution_issues_request_key"),
     )
 
     id = db.Column(Integer, primary_key=True)
@@ -39,6 +40,7 @@ class DistributionIssue(TimestampMixin, db.Model):
     business_date = db.Column(Date, nullable=False, index=True)
     period_code = db.Column(String(12), nullable=False, default="daily")
     statement = db.Column(Text, nullable=True)
+    request_key = db.Column(String(64), nullable=False)
     created_by_id = db.Column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -52,6 +54,7 @@ class PartyPayment(TimestampMixin, db.Model):
     __tablename__ = "party_payments"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
+        UniqueConstraint("request_key", name="uq_party_payments_request_key"),
     )
 
     id = db.Column(Integer, primary_key=True)
@@ -62,6 +65,7 @@ class PartyPayment(TimestampMixin, db.Model):
     business_date = db.Column(Date, nullable=False, index=True)
     period_code = db.Column(String(12), nullable=False, default="daily")
     statement = db.Column(Text, nullable=True)
+    request_key = db.Column(String(64), nullable=False)
     created_by_id = db.Column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
