@@ -8,7 +8,7 @@
     <h1>دفع نقدي — {{ meta.plural }}</h1>
     <p class="heading-subtitle">يُسجّل الدفع في دفتر الحساب ويُضاف إلى الصندوق الرئيسي ضمن معاملة واحدة.</p>
   </div>
-  <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">رجوع للحسابات</a>
+  <a class="secondary-button" href="{{ (url_for('parties.index') if party_type == 'all' else url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers')) }}">رجوع للحسابات</a>
 </section>
 
 <section class="content-card distribution-context">
@@ -54,7 +54,7 @@
     </div>
     <div class="dialog-actions">
       <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل الدفع...">تسجيل دفع</button>
-      <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">إلغاء</a>
+      <a class="secondary-button" href="{{ (url_for('parties.index') if party_type == 'all' else url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers')) }}">إلغاء</a>
     </div>
   </section>
 </form>
