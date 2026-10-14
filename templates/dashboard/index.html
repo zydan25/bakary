@@ -36,43 +36,29 @@
 
 {% block content %}
 <section class="content-card quick-actions-card">
-  <div class="section-title"><div><h2>إجراءات سريعة</h2><p>اختصارات مخصصة من إعدادات النظام</p></div></div>
+  <div class="section-title"><h2>إجراءات سريعة</h2></div>
+  {% if quick_actions %}
   <div class="quick-action-list">
-    {% if 'product_new' in quick_actions_enabled and current_user.has_permission('products.manage') %}
-    <a class="quick-action" data-quick-action="product_new" href="{{ url_for('products.index', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة صنف</span></a>
-    {% endif %}
-    {% if 'inventory_new' in quick_actions_enabled and current_user.has_permission('inventory.manage') %}
-    <a class="quick-action" data-quick-action="inventory_new" href="{{ url_for('inventory.index', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة مادة</span></a>
-    {% endif %}
-    {% if 'production_batch' in quick_actions_enabled and current_user.has_permission('production.manage') %}
-    <a class="quick-action" data-quick-action="production_batch" href="{{ url_for('production.index', action='batch') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>تسجيل عجنة</span></a>
-    {% endif %}
-    {% if 'employee_new' in quick_actions_enabled and current_user.has_permission('employees.manage') %}
-    <a class="quick-action" data-quick-action="employee_new" href="{{ url_for('staff.employees', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة موظف</span></a>
-    {% endif %}
-    {% if 'free_recipient' in quick_actions_enabled and current_user.has_permission('free_distribution.manage') %}
-    <a class="quick-action" data-quick-action="free_recipient" href="{{ url_for('operations.free_distribution', action='recipient') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>مستفيد مجاني</span></a>
-    {% endif %}
-    {% if 'expense_new' in quick_actions_enabled and current_user.has_permission('expenses.manage') %}
-    <a class="quick-action" data-quick-action="expense_new" href="{{ url_for('finance.expenses', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>تسجيل مصروف</span></a>
-    {% endif %}
-    {% if 'products' in quick_actions_enabled and (current_user.has_permission('products.view') or current_user.has_permission('products.manage')) %}
-    <a class="quick-action" data-quick-action="products" href="{{ url_for('products.index') }}"><span class="quick-action-plus">{{ ui_icon('list', 17) }}</span><span>الأصناف</span></a>
-    {% endif %}
-    {% if 'distributor_new' in quick_actions_enabled and current_user.has_permission('parties.manage') %}
-    <a class="quick-action" data-quick-action="distributor_new" href="{{ url_for('parties.distributors', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة موزع</span></a>
-    {% endif %}
-    {% if 'customer_new' in quick_actions_enabled and current_user.has_permission('parties.manage') %}
-    <a class="quick-action" data-quick-action="customer_new" href="{{ url_for('parties.customers', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة عميل</span></a>
-    {% endif %}
-    {% if 'account' in quick_actions_enabled %}
-    <a class="quick-action" data-quick-action="account" href="{{ url_for('auth.account') }}"><span class="quick-action-plus">{{ ui_icon('person', 17) }}</span><span>حسابي</span></a>
-    {% endif %}
+    {% for action in quick_actions %}
+    <a class="quick-action" href="{{ action.url }}" data-quick-action-index="{{ loop.index0 }}">
+      <span class="quick-action-plus">
+        {% if '/payment/' in action.url %}{{ ui_icon('cash', 19) }}
+        {% elif '/issue/' in action.url %}{{ ui_icon('truck', 19) }}
+        {% elif '/parties' in action.url %}{{ ui_icon('parties', 19) }}
+        {% elif '/products' in action.url %}{{ ui_icon('bread', 19) }}
+        {% elif '/inventory' in action.url %}{{ ui_icon('box', 19) }}
+        {% elif '/production' in action.url %}{{ ui_icon('oven', 19) }}
+        {% else %}{{ ui_icon('plus', 17) }}{% endif %}
+      </span>
+      <span>{{ action.label }}</span>
+    </a>
+    {% endfor %}
   </div>
+  {% endif %}
 </section>
 
 <section class="dashboard-modules-section">
-  <div class="section-title"><div><h2>وحدات النظام</h2><p>تظهر الأقسام وفق صلاحيات حسابك، وتُفعّل وظائف كل قسم ضمن مرحلته.</p></div></div>
+  <div class="section-title"><h2>وحدات النظام</h2></div>
   <div class="dashboard-module-grid">
     {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
@@ -111,5 +97,5 @@
   </div>
 </section>
 
-<section class="content-card dashboard-signature"><strong>برمجة وتصميم م. زيدان العطاب</strong><span>774952665 · يمن كود للتقنيات الذكية</span></section>
+<footer class="dashboard-signature"><strong>برمجة وتصميم م. زيدان العطاب</strong><span>774952665 · يمن كود للتقنيات الذكية</span></footer>
 {% endblock %}
