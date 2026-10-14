@@ -108,6 +108,7 @@ def upgrade():
         sa.Column("business_date", sa.Date(), nullable=False),
         sa.Column("period_code", sa.String(length=12), nullable=False),
         sa.Column("statement", sa.Text(), nullable=True),
+        sa.Column("request_key", sa.String(length=64), nullable=False),
         sa.Column("created_by_id", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -132,6 +133,7 @@ def upgrade():
             ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name="pk_distribution_issues"),
+        sa.UniqueConstraint("request_key", name="uq_distribution_issues_request_key"),
     )
     op.create_index("ix_distribution_issues_party_id", "distribution_issues", ["party_id"], unique=False)
     op.create_index("ix_distribution_issues_product_id", "distribution_issues", ["product_id"], unique=False)
@@ -145,6 +147,7 @@ def upgrade():
         sa.Column("business_date", sa.Date(), nullable=False),
         sa.Column("period_code", sa.String(length=12), nullable=False),
         sa.Column("statement", sa.Text(), nullable=True),
+        sa.Column("request_key", sa.String(length=64), nullable=False),
         sa.Column("created_by_id", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -160,6 +163,7 @@ def upgrade():
             ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name="pk_party_payments"),
+        sa.UniqueConstraint("request_key", name="uq_party_payments_request_key"),
     )
     op.create_index("ix_party_payments_party_id", "party_payments", ["party_id"], unique=False)
     op.create_index("ix_party_payments_business_date", "party_payments", ["business_date"], unique=False)
