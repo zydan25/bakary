@@ -1,6 +1,7 @@
 """Validated forms for free distribution and period handover."""
 
 from datetime import date
+from app.services.clock import business_today
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
@@ -27,7 +28,7 @@ class FreeIssueForm(FlaskForm):
             NumberRange(min=Decimal("0.001"), message="الكمية يجب أن تكون أكبر من صفر."),
         ],
     )
-    business_date = DateField("التاريخ", format="%Y-%m-%d", default=date.today, validators=[DataRequired()])
+    business_date = DateField("التاريخ", format="%Y-%m-%d", default=business_today, validators=[DataRequired()])
     period_code = SelectField("الفترة", validators=[DataRequired()])
     statement = TextAreaField("البيان", validators=[Optional(), Length(max=1000)])
 
