@@ -159,7 +159,7 @@ def create_cash_transfer(*, source_account_id, target_account_id, amount, busine
     transfer = CashTransfer(
         request_key=key,
         source_account_id=source.id,
-        target_account_id=target.id,
+        destination_account_id=target.id,
         amount=amount,
         business_date=business_date or date.today(),
         statement=(statement or "").strip() or None,
