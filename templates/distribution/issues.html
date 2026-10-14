@@ -1,0 +1,46 @@
+{% extends "layouts/base.html" %}
+{% block title %}سجل الصرف{% endblock %}
+{% block page_heading %}سجل الصرف{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">الصرف والتحصيل</p><h1>سجل الصرف</h1><p class="heading-subtitle">كل عمليات صرف الأصناف للحسابات، مع تعديل وحذف الحركات التي ما زالت فتراتها مفتوحة.</p></div>
+ <div class="heading-actions">
+  <a class="primary-button" href="{{ url_for('distribution.issue',party_type='all') }}">＋ تسجيل صرف</a>
+ </div>
+</section>
+<form class="content-card record-filter-toolbar" method="get" action="{{ url_for('distribution.issue_records') }}" data-live-filter-target="#issue-record-list">
+ <div class="record-filter-grid">
+  <div class="form-field"><label class="field-label" for="issue-q">بحث فوري</label><input class="form-control" id="issue-q" type="search" name="q" value="{{ query_text }}" placeholder="ابحث باسم الحساب أو الصنف أو البيان..."></div>
+  <div class="form-field"><label class="field-label" for="issue-party-type">نوع الحساب</label><select class="form-control" id="issue-party-type" name="party_type" data-searchable="true" data-live-submit><option value="all" {% if party_type == 'all' %}selected{% endif %}>الكل</option><option value="distributor" {% if party_type == 'distributor' %}selected{% endif %}>الموزعون</option><option value="customer" {% if party_type == 'customer' %}selected{% endif %}>العملاء</option></select></div>
+  <div class="form-field"><label class="field-label" for="issue-period">الفترة</label><select class="form-control" id="issue-period" name="period_id" data-searchable="true" data-live-submit><option value="">كل الفترات</option>{% for period in periods %}<option value="{{ period.id }}" {% if selected_period_id == period.id %}selected{% endif %}>{{ period_day_name(period.business_date) }} · {{ period_label(period.period_code) }} · {{ 'مفتوحة' if period.status == 'open' else 'مختتمة' }}</option>{% endfor %}</select></div>
+ </div>
+ <noscript><button class="secondary-button" type="submit">تطبيق المرشحات</button></noscript>
+</form>
+<section id="issue-record-list" class="distribution-record-list">
+ {% for item in items %}
+ {% set row = item.transaction %}
+ <article class="content-card distribution-record-card" data-searchable-card data-search-text="{{ row.party.name }} {{ row.product.name }} {{ row.statement or '' }} {{ row.period_code }} {{ row.business_date }}">
+  <div class="distribution-record-top">
+   <div class="distribution-record-icon">↗</div>
+   <div class="distribution-record-heading"><h2>{{ row.party.name }}</h2><p>{{ row.product.name }} · {{ row.quantity }} {{ row.product.unit_label }}</p></div>
+   <strong class="distribution-record-amount">{{ "{:,.2f}".format(row.total_amount) }} <small>ريال</small></strong>
+  </div>
+  <div class="distribution-record-meta">
+   <span>{{ period_day_name(row.business_date) }} · {{ period_label(row.period_code) }}</span>
+   <span>{% if item.period %}{{ 'فترة مفتوحة' if item.period.status == 'open' else 'فترة مختتمة' }}{% else %}فترة غير معرّفة{% endif %}</span>
+   <span>سعر الوحدة {{ "{:,.2f}".format(row.unit_price) }} ريال</span>
+  </div>
+  {% if row.statement %}<p class="distribution-record-note">{{ row.statement }}</p>{% endif %}
+  <div class="distribution-record-actions">
+   {% if item.editable %}
+   <a class="secondary-button" href="{{ url_for('distribution.edit_issue',issue_id=row.id) }}">تعديل الصرف</a>
+   <form method="post" action="{{ url_for('distribution.delete_issue',issue_id=row.id) }}" data-confirm="سيتم حذف حركة الصرف والقيد المالي المرتبط بها بالكامل من الفترة المفتوحة. هل تريد المتابعة؟">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="danger-button">حذف الحركة والقيد</button>
+   </form>
+   {% else %}<span class="locked-period-note">لا يمكن التعديل أو الحذف بعد إقفال الفترة</span>{% endif %}
+  </div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا توجد حركات صرف</h2><p>لم تُسجل عمليات تطابق المرشحات الحالية.</p><a class="primary-button" href="{{ url_for('distribution.issue',party_type='all') }}">تسجيل أول عملية صرف</a></div>{% endfor %}
+</section>
+{% endblock %}
