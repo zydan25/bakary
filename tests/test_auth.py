@@ -39,7 +39,7 @@ def test_login_and_permission_protected_dashboard():
         )
         assert response.status_code == 200
         page = response.get_data(as_text=True)
-        assert "إدارة يومك من مكان واحد" in page
+        assert "إجراءات سريعة" in page
         assert "الأصناف والتسعير" in page
     finally:
         teardown_database(app)
