@@ -7,12 +7,13 @@ from uuid import uuid4
 
 from flask import abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from app.distribution import distribution_bp
-from app.distribution.forms import IssueForm, PaymentForm
+from app.distribution.forms import IssueEditForm, IssueForm, PaymentEditForm, PaymentForm
 from app.extensions import db
 from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
+from app.models.finance import CashAccount, CashMovement
 from app.models.production import BusinessPeriod
 from app.models.party import Party
 from app.models.product import Product
@@ -519,3 +520,367 @@ def party_statement(party_type, party_id):
         credit_total=credit_total,
         closing_balance=running,
     )
+
+
+
+def _period_for_transaction(business_date, period_code, *, lock=False):
+    statement = select(BusinessPeriod).where(
+        BusinessPeriod.business_date == business_date,
+        BusinessPeriod.period_code == period_code,
+    )
+    if lock:
+        statement = statement.with_for_update()
+    return db.session.scalar(statement)
+
+
+def _period_day_or_date(period):
+    if period is None:
+        return "فترة غير معرّفة"
+    return f"{period_day_name(period.business_date)} · {period_label(period.period_code)}"
+
+
+def _transaction_period_map(rows):
+    keys = {(row.business_date, row.period_code) for row in rows}
+    if not keys:
+        return {}
+    periods = db.session.scalars(
+        select(BusinessPeriod).order_by(BusinessPeriod.id.desc())
+    ).all()
+    by_key = {(row.business_date, row.period_code): row for row in periods}
+    return {key: by_key.get(key) for key in keys}
+
+
+@distribution_bp.get("/issues")
+@login_required
+def issue_records():
+    _require("distribution.issue")
+    query_text = (request.args.get("q") or "").strip()
+    party_type = request.args.get("party_type", "all")
+    if party_type not in PARTY_LABELS:
+        party_type = "all"
+    selected_period_id = request.args.get("period_id", type=int)
+    statement = (
+        select(DistributionIssue)
+        .join(Party, DistributionIssue.party_id == Party.id)
+        .join(Product, DistributionIssue.product_id == Product.id)
+    )
+    if party_type != "all":
+        statement = statement.where(Party.party_type == party_type)
+    if query_text:
+        pattern = f"%{query_text}%"
+        statement = statement.where(or_(
+            Party.name.ilike(pattern),
+            Product.name.ilike(pattern),
+            DistributionIssue.statement.ilike(pattern),
+        ))
+    periods = db.session.scalars(
+        select(BusinessPeriod).order_by(
+            BusinessPeriod.business_date.desc(), BusinessPeriod.opened_at.desc(), BusinessPeriod.id.desc()
+        ).limit(180)
+    ).all()
+    if selected_period_id:
+        selected_period = db.session.get(BusinessPeriod, selected_period_id)
+        if selected_period is not None:
+            statement = statement.where(
+                DistributionIssue.business_date == selected_period.business_date,
+                DistributionIssue.period_code == selected_period.period_code,
+            )
+    rows = db.session.scalars(
+        statement.order_by(DistributionIssue.business_date.desc(), DistributionIssue.id.desc()).limit(300)
+    ).all()
+    period_map = _transaction_period_map(rows)
+    items = [{
+        "transaction": row,
+        "period": period_map.get((row.business_date, row.period_code)),
+        "editable": bool(period_map.get((row.business_date, row.period_code)) and period_map[(row.business_date, row.period_code)].status == "open"),
+    } for row in rows]
+    return render_template(
+        "distribution/issues.html",
+        items=items,
+        periods=periods,
+        selected_period_id=selected_period_id,
+        query_text=query_text,
+        party_type=party_type,
+    )
+
+
+@distribution_bp.get("/payments")
+@login_required
+def payment_records():
+    _require("distribution.payment")
+    query_text = (request.args.get("q") or "").strip()
+    party_type = request.args.get("party_type", "all")
+    if party_type not in PARTY_LABELS:
+        party_type = "all"
+    selected_period_id = request.args.get("period_id", type=int)
+    statement = select(PartyPayment).join(Party, PartyPayment.party_id == Party.id)
+    if party_type != "all":
+        statement = statement.where(Party.party_type == party_type)
+    if query_text:
+        pattern = f"%{query_text}%"
+        statement = statement.where(or_(Party.name.ilike(pattern), PartyPayment.statement.ilike(pattern)))
+    periods = db.session.scalars(
+        select(BusinessPeriod).order_by(
+            BusinessPeriod.business_date.desc(), BusinessPeriod.opened_at.desc(), BusinessPeriod.id.desc()
+        ).limit(180)
+    ).all()
+    if selected_period_id:
+        selected_period = db.session.get(BusinessPeriod, selected_period_id)
+        if selected_period is not None:
+            statement = statement.where(
+                PartyPayment.business_date == selected_period.business_date,
+                PartyPayment.period_code == selected_period.period_code,
+            )
+    rows = db.session.scalars(
+        statement.order_by(PartyPayment.business_date.desc(), PartyPayment.id.desc()).limit(300)
+    ).all()
+    period_map = _transaction_period_map(rows)
+    items = [{
+        "transaction": row,
+        "period": period_map.get((row.business_date, row.period_code)),
+        "editable": bool(period_map.get((row.business_date, row.period_code)) and period_map[(row.business_date, row.period_code)].status == "open"),
+    } for row in rows]
+    return render_template(
+        "distribution/payments.html",
+        items=items,
+        periods=periods,
+        selected_period_id=selected_period_id,
+        query_text=query_text,
+        party_type=party_type,
+    )
+
+
+@distribution_bp.route("/issues/<int:issue_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_issue(issue_id):
+    _require("distribution.issue")
+    issue = db.session.get(DistributionIssue, issue_id)
+    if issue is None:
+        abort(404)
+    period = _period_for_transaction(issue.business_date, issue.period_code)
+    if period is None or period.status != "open":
+        flash("لا يمكن تعديل هذا الصرف لأن فترته غير مفتوحة.", "error")
+        return redirect(url_for("distribution.issue_records"))
+
+    form = IssueEditForm()
+    parties = db.session.scalars(
+        select(Party).where(or_(Party.is_active.is_(True), Party.id == issue.party_id)).order_by(Party.name.asc())
+    ).all()
+    products = db.session.scalars(
+        select(Product).where(or_(Product.is_active.is_(True), Product.id == issue.product_id))
+        .order_by(Product.is_default.desc(), Product.name.asc())
+    ).all()
+    form.party_id.choices = [(row.id, row.name) for row in parties]
+    form.product_id.choices = [(row.id, row.name) for row in products]
+    if request.method == "GET":
+        form.party_id.data = issue.party_id
+        form.product_id.data = issue.product_id
+        form.quantity.data = issue.quantity
+        form.statement.data = issue.statement or ""
+    if request.method == "POST" and form.validate_on_submit():
+        party = db.session.get(Party, form.party_id.data)
+        product = db.session.get(Product, form.product_id.data)
+        if party is None or product is None or (not party.is_active and party.id != issue.party_id) or (not product.is_active and product.id != issue.product_id):
+            flash("الحساب أو الصنف غير متاح للتعديل.", "error")
+        else:
+            try:
+                unit_price = money(party.price_for(product))
+                if unit_price <= 0:
+                    raise BusinessRuleError("سعر الصنف لهذا الحساب غير مضبوط.")
+                quantity = int(form.quantity.data)
+                total = money(unit_price * quantity)
+                # Recheck the period under lock immediately before mutating financial rows.
+                locked_period = _period_for_transaction(issue.business_date, issue.period_code, lock=True)
+                if locked_period is None or locked_period.status != "open":
+                    raise PeriodRuleError("أُغلقت الفترة؛ لا يمكن تعديل الحركة.")
+                issue.party_id = party.id
+                issue.product_id = product.id
+                issue.quantity = quantity
+                issue.unit_price = unit_price
+                issue.total_amount = total
+                issue.statement = (form.statement.data or "").strip() or None
+                ledger = db.session.scalar(select(PartyLedgerEntry).where(
+                    PartyLedgerEntry.source_type == "distribution_issue",
+                    PartyLedgerEntry.source_id == issue.id,
+                ).with_for_update())
+                if ledger is None:
+                    ledger = PartyLedgerEntry(
+                        party_id=party.id, entry_type="issue", debit_amount=total,
+                        credit_amount=Decimal("0.00"), business_date=issue.business_date,
+                        source_type="distribution_issue", source_id=issue.id,
+                        statement=issue.statement, created_by_id=current_user.id,
+                    )
+                    db.session.add(ledger)
+                else:
+                    ledger.party_id = party.id
+                    ledger.entry_type = "issue"
+                    ledger.debit_amount = total
+                    ledger.credit_amount = Decimal("0.00")
+                    ledger.business_date = issue.business_date
+                    ledger.statement = issue.statement
+                db.session.commit()
+                flash("تم تحديث الصرف والقيد المالي المرتبط به.", "success")
+                return redirect(url_for("distribution.issue_records"))
+            except (BusinessRuleError, PeriodRuleError) as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
+            except Exception:
+                db.session.rollback()
+                flash("تعذر تعديل الصرف؛ لم يتم حفظ أي تغيير.", "error")
+    return render_template("distribution/issue_edit.html", form=form, issue=issue, period=period)
+
+
+@distribution_bp.post("/issues/<int:issue_id>/delete")
+@login_required
+def delete_issue(issue_id):
+    _require("distribution.issue")
+    issue = db.session.get(DistributionIssue, issue_id)
+    if issue is None:
+        abort(404)
+    period = _period_for_transaction(issue.business_date, issue.period_code, lock=True)
+    if period is None or period.status != "open":
+        flash("لا يمكن حذف هذا الصرف لأن فترته مختتمة أو غير مفتوحة.", "error")
+        return redirect(url_for("distribution.issue_records"))
+    try:
+        ledger_rows = db.session.scalars(select(PartyLedgerEntry).where(
+            PartyLedgerEntry.source_type == "distribution_issue",
+            PartyLedgerEntry.source_id == issue.id,
+        )).all()
+        for row in ledger_rows:
+            db.session.delete(row)
+        # Remove any linked cash entry as well, should one exist from a prior correction.
+        cash_rows = db.session.scalars(select(CashMovement).where(
+            CashMovement.source_type == "distribution_issue",
+            CashMovement.source_id == issue.id,
+        )).all()
+        for row in cash_rows:
+            db.session.delete(row)
+        db.session.delete(issue)
+        db.session.commit()
+        flash("تم حذف الصرف وقيده المالي المرتبط بالكامل.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("تعذر حذف الصرف؛ لم يتم تأكيد أي تغيير.", "error")
+    return redirect(url_for("distribution.issue_records"))
+
+
+@distribution_bp.route("/payments/<int:payment_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_payment(payment_id):
+    _require("distribution.payment")
+    payment = db.session.get(PartyPayment, payment_id)
+    if payment is None:
+        abort(404)
+    period = _period_for_transaction(payment.business_date, payment.period_code)
+    if period is None or period.status != "open":
+        flash("لا يمكن تعديل هذا الدفع لأن فترته غير مفتوحة.", "error")
+        return redirect(url_for("distribution.payment_records"))
+
+    form = PaymentEditForm()
+    parties = db.session.scalars(
+        select(Party).where(or_(Party.is_active.is_(True), Party.id == payment.party_id)).order_by(Party.name.asc())
+    ).all()
+    form.party_id.choices = [(row.id, row.name) for row in parties]
+    if request.method == "GET":
+        form.party_id.data = payment.party_id
+        form.amount.data = str(payment.amount)
+        form.statement.data = payment.statement or ""
+    if request.method == "POST" and form.validate_on_submit():
+        party = db.session.get(Party, form.party_id.data)
+        if party is None or (not party.is_active and party.id != payment.party_id):
+            flash("الحساب المحدد غير متاح للتعديل.", "error")
+        else:
+            try:
+                amount = money(form.amount.data)
+                if amount <= 0:
+                    raise BusinessRuleError("يجب أن يكون المبلغ أكبر من صفر.")
+                locked_period = _period_for_transaction(payment.business_date, payment.period_code, lock=True)
+                if locked_period is None or locked_period.status != "open":
+                    raise PeriodRuleError("أُغلقت الفترة؛ لا يمكن تعديل الحركة.")
+                payment.party_id = party.id
+                payment.amount = amount
+                payment.statement = (form.statement.data or "").strip() or None
+                ledger = db.session.scalar(select(PartyLedgerEntry).where(
+                    PartyLedgerEntry.source_type == "party_payment",
+                    PartyLedgerEntry.source_id == payment.id,
+                ).with_for_update())
+                if ledger is None:
+                    db.session.add(PartyLedgerEntry(
+                        party_id=party.id, entry_type="payment",
+                        debit_amount=Decimal("0.00"), credit_amount=amount,
+                        business_date=payment.business_date, source_type="party_payment",
+                        source_id=payment.id, statement=payment.statement, created_by_id=current_user.id,
+                    ))
+                else:
+                    ledger.party_id = party.id
+                    ledger.entry_type = "payment"
+                    ledger.debit_amount = Decimal("0.00")
+                    ledger.credit_amount = amount
+                    ledger.business_date = payment.business_date
+                    ledger.statement = payment.statement
+
+                movement = db.session.scalar(select(CashMovement).where(
+                    CashMovement.source_type == "party_payment",
+                    CashMovement.source_id == payment.id,
+                ).with_for_update())
+                if movement is None:
+                    main_account = db.session.scalar(select(CashAccount).where(
+                        CashAccount.is_main.is_(True), CashAccount.is_active.is_(True)
+                    ).with_for_update())
+                    if main_account is None:
+                        raise BusinessRuleError("لم يتم إعداد الصندوق الرئيسي؛ تعذر تحديث حركة التحصيل.")
+                    movement = CashMovement(
+                        cash_account_id=main_account.id, party_id=party.id, movement_type="party_payment",
+                        direction="in", amount=amount, business_date=payment.business_date,
+                        statement=payment.statement or f"تحصيل من {party.name}",
+                        source_type="party_payment", source_id=payment.id, created_by_id=current_user.id,
+                    )
+                    db.session.add(movement)
+                else:
+                    movement.party_id = party.id
+                    movement.amount = amount
+                    movement.business_date = payment.business_date
+                    movement.statement = payment.statement or f"تحصيل من {party.name}"
+                db.session.commit()
+                flash("تم تحديث الدفعة وقيد الحساب وحركة الصندوق المرتبطة بها.", "success")
+                return redirect(url_for("distribution.payment_records"))
+            except (BusinessRuleError, PeriodRuleError) as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
+            except Exception:
+                db.session.rollback()
+                flash("تعذر تعديل الدفعة؛ لم يتم حفظ أي تغيير.", "error")
+    return render_template("distribution/payment_edit.html", form=form, payment=payment, period=period)
+
+
+@distribution_bp.post("/payments/<int:payment_id>/delete")
+@login_required
+def delete_payment(payment_id):
+    _require("distribution.payment")
+    payment = db.session.get(PartyPayment, payment_id)
+    if payment is None:
+        abort(404)
+    period = _period_for_transaction(payment.business_date, payment.period_code, lock=True)
+    if period is None or period.status != "open":
+        flash("لا يمكن حذف هذا الدفع لأن فترته مختتمة أو غير مفتوحة.", "error")
+        return redirect(url_for("distribution.payment_records"))
+    try:
+        ledger_rows = db.session.scalars(select(PartyLedgerEntry).where(
+            PartyLedgerEntry.source_type == "party_payment",
+            PartyLedgerEntry.source_id == payment.id,
+        )).all()
+        cash_rows = db.session.scalars(select(CashMovement).where(
+            CashMovement.source_type == "party_payment",
+            CashMovement.source_id == payment.id,
+        )).all()
+        for row in ledger_rows:
+            db.session.delete(row)
+        for row in cash_rows:
+            db.session.delete(row)
+        db.session.delete(payment)
+        db.session.commit()
+        flash("تم حذف الدفعة وقيد الحساب وحركة الصندوق المرتبطة بالكامل.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("تعذر حذف الدفعة؛ لم يتم تأكيد أي تغيير.", "error")
+    return redirect(url_for("distribution.payment_records"))
