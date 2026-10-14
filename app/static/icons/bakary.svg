@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Bakary — نظام إدارة المخبز</title>
+  <rect width="512" height="512" rx="112" fill="#1a56db"/>
+  <path d="M120 324c0-43 33-78 76-78h120c43 0 76 35 76 78v49c0 20-16 36-36 36H156c-20 0-36-16-36-36z" fill="#fff"/>
+  <path d="M164 251c-17-23-11-57 14-74 25-16 56-9 71 15 15-24 47-31 71-15 25 17 31 51 14 74" fill="none" stroke="#fff" stroke-width="25" stroke-linecap="round"/>
+  <path d="M188 313v60M256 300v73M324 313v60" stroke="#1a56db" stroke-width="17" stroke-linecap="round"/>
+  <path d="M256 130c-18 22-22 42-12 61 7 14 23 21 38 16 17-6 25-24 17-41-7-15-23-24-43-36z" fill="#fbbf24"/>
+  <path d="M255 145c7 20 9 38 5 54" stroke="#fff" stroke-width="9" stroke-linecap="round" fill="none"/>
+</svg>
