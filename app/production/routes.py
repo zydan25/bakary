@@ -1,6 +1,7 @@
 """Production register and period-level ingredient consumption pages."""
 
 from datetime import date
+from app.services.clock import business_today
 from decimal import Decimal
 from uuid import uuid4
 
@@ -29,9 +30,9 @@ def _require(permission):
 
 def _parse_date(value):
     try:
-        return date.fromisoformat(value) if value else date.today()
+        return date.fromisoformat(value) if value else business_today()
     except (TypeError, ValueError):
-        return date.today()
+        return business_today()
 
 
 def _selected_period_code(value):
