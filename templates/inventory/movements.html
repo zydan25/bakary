@@ -1,0 +1,28 @@
+{% extends "layouts/base.html" %}
+{% block title %}حركة {{ item.name }}{% endblock %}
+{% block page_heading %}حركة المادة{% endblock %}
+{% block content %}
+<section class="page-heading-row"><div><p class="eyebrow">دفتر المخزون</p><h1>حركة {{ item.name }}</h1><p class="heading-subtitle">رمز المادة: {{ item.code }} · الوحدة: {{ item.unit_label }}</p></div><div class="heading-actions"><button class="secondary-button" type="button" onclick="window.print()">طباعة</button><a class="secondary-button" href="{{ url_for('inventory.index') }}">رجوع للمخزون</a></div></section>
+
+<section class="content-card stock-current-card">
+  <small>الرصيد الحالي</small>
+  <strong>{{ "{:,.3f}".format(balance) }} {{ item.unit_label }}</strong>
+</section>
+
+<section class="entity-list">
+  {% for row in rows %}
+  <article class="entity-card">
+    <div class="entity-top">
+      <div class="entity-avatar">{{ '＋' if row.direction == 'in' else '−' }}</div>
+      <div class="entity-main"><h2>{% if row.movement_type == 'opening_balance' %}رصيد افتتاحي{% elif row.movement_type == 'addition' %}إضافة مخزون{% elif row.movement_type == 'production_consumption' %}استهلاك إنتاج{% else %}حركة مخزون{% endif %}</h2><p>{{ row.business_date.isoformat() }}{% if row.created_at %} · {{ row.created_at.strftime('%H:%M') }}{% endif %}</p></div>
+      <span class="status-badge {% if row.direction == 'in' %}status-primary{% else %}status-muted{% endif %}">{% if row.direction == 'in' %}وارد{% else %}صادر{% endif %}</span>
+    </div>
+    <div class="stock-balance-panel"><small>الكمية</small><strong class="{% if row.direction == 'in' %}summary-green{% else %}summary-red{% endif %}">{% if row.direction == 'out' %}−{% else %}+{% endif %}{{ "{:,.3f}".format(row.quantity) }} {{ item.unit_label }}</strong></div>
+    {% if row.statement %}<p class="heading-subtitle">{{ row.statement }}</p>{% endif %}
+    {% if row.unit_cost is not none %}<div class="entity-extra-line"><span>تكلفة الوحدة المسجلة</span><strong>{{ "{:,.2f}".format(row.unit_cost) }} ريال</strong></div>{% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><h2>لا توجد حركات للمادة</h2><p>سجّل رصيدًا افتتاحيًا لبدء متابعة الكميات.</p></div>
+  {% endfor %}
+</section>
+{% endblock %}
