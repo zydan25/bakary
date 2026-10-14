@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}حسابي{% endblock %}
+{% block page_heading %}حسابي{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div><p class="eyebrow">الحساب الشخصي</p><h1>حسابي</h1></div>
+</section>
+
+<section class="content-card account-summary">
+  <div class="account-avatar">{{ current_user.full_name[:1] }}</div>
+  <div class="account-summary-text">
+    <h2>{{ current_user.full_name }}</h2>
+    <p dir="ltr">{{ current_user.phone }}</p>
+    <div class="role-chip-row">
+      {% for role in current_user.roles %}<span class="role-chip">{{ role.name }}</span>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="content-card">
+  <div class="section-title"><h2>تغيير كلمة المرور</h2><p>استخدم كلمة مرور لا تقل عن 8 أحرف.</p></div>
+  <form method="post" class="form-stack">
+    {{ form.hidden_tag() }}
+    <div class="form-field">
+      {{ form.current_password.label(class_="field-label") }}
+      {{ form.current_password(class_="form-control", autocomplete="current-password") }}
+      {% for error in form.current_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.new_password.label(class_="field-label") }}
+      {{ form.new_password(class_="form-control", autocomplete="new-password") }}
+      {% for error in form.new_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.confirm_password.label(class_="field-label") }}
+      {{ form.confirm_password(class_="form-control", autocomplete="new-password") }}
+      {% for error in form.confirm_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">تحديث كلمة المرور</button>
+  </form>
+</section>
+{% endblock %}
