@@ -55,7 +55,7 @@ def test_employee_create_makes_login_account_and_assigns_role():
             employee = db.session.scalar(select(Employee).where(Employee.full_name == "موظف تجريبي"))
             assert employee is not None
             assert employee.user is not None
-            assert employee.user.phone == "+967777123456"
+            assert employee.user.phone == "777123456"
             assert employee.user.check_password("Employee-pass-123")
             assert [role.code for role in employee.user.roles] == ["distribution"]
     finally:
