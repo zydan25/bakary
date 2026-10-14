@@ -28,7 +28,10 @@ def setup():
         handover_permission = Permission(
             name="تسجيل التسليمات", code="handover.manage", description="تسليم الفترة"
         )
-        receiver_role.permissions.append(handover_permission)
+        dashboard_permission = Permission(
+            name="عرض الرئيسية", code="dashboard.view", description="عرض لوحة التحكم"
+        )
+        receiver_role.permissions.extend([handover_permission, dashboard_permission])
         owner = User(full_name="مدير المخبز", phone="+967771234567", is_active=True)
         owner.set_password("Strong-pass-123")
         owner.roles.append(owner_role)
@@ -42,7 +45,7 @@ def setup():
         )
         cash = CashAccount(code="MAIN", name="الصندوق الرئيسي", account_type="cash", is_main=True, is_active=True)
         employee = Employee(full_name="مسؤول البيع", phone="+967777123456", job_title="مستلم", is_active=True, created_by_id=1)
-        db.session.add_all([owner_role, receiver_role, handover_permission, owner, receiver, product, cash, employee])
+        db.session.add_all([owner_role, receiver_role, handover_permission, dashboard_permission, owner, receiver, product, cash, employee])
         db.session.commit()
         ids = (owner.id, product.id, employee.id)
     return app, ids
