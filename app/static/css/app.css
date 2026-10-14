@@ -1420,3 +1420,62 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .distribution-record-actions { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Account settings use compact entry cards and open forms only inside dialogs. */
+.account-profile-hero { display: flex; align-items: center; gap: 17px; padding: 22px; margin-bottom: 13px; background: linear-gradient(135deg, #fff 0%, #f5f8ff 100%); }
+.account-avatar-large { flex: 0 0 66px; width: 66px; height: 66px; display: grid; place-items: center; border-radius: 21px; font-size: 26px; }
+.account-profile-hero .account-summary-text { min-width: 0; }
+.account-profile-hero .account-summary-text h2 { margin: 7px 0 4px; font-size: 21px; overflow-wrap: anywhere; }
+.account-phone-value { margin: 0 0 9px; color: #63718a; font-size: 14px; letter-spacing: .3px; }
+.account-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border: 1px solid #cbeedd; border-radius: 999px; background: #f0fbf5; color: #17754d; font-size: 11px; font-weight: 800; }
+.account-status-pill span { width: 6px; height: 6px; border-radius: 50%; background: #20a76a; }
+.account-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.account-setting-card { display: flex; width: 100%; min-width: 0; align-items: center; gap: 12px; padding: 17px; border: 1px solid #e0e7f1; border-radius: 16px; background: #fff; color: #273449; text-align: right; cursor: pointer; box-shadow: 0 3px 13px rgba(25,42,70,.035); transition: border-color .15s ease, background .15s ease, transform .15s ease, box-shadow .15s ease; }
+.account-setting-card:hover { border-color: #c6d6f4; background: #fbfcff; box-shadow: 0 6px 18px rgba(25,42,70,.065); transform: translateY(-1px); }
+.account-setting-card:focus-visible { outline: 3px solid rgba(26,86,219,.22); outline-offset: 2px; }
+.account-setting-icon { display: grid; flex: 0 0 47px; width: 47px; height: 47px; place-items: center; border: 1px solid #d9e5ff; border-radius: 14px; background: #eff4ff; color: #2253b5; font-size: 25px; }
+.account-setting-icon--security { border-color: #cceee4; background: #effaf6; color: #087858; }
+.account-setting-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
+.account-setting-copy strong { color: #253249; font-size: 14px; font-weight: 850; line-height: 1.45; }
+.account-setting-copy small { color: #778398; font-size: 11px; line-height: 1.6; }
+.account-setting-action { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #2455b4; font-size: 11px; font-weight: 850; }
+.account-setting-action b { font-size: 16px; }
+.app-form-dialog, .app-confirm-dialog { width: min(100% - 28px, 490px); max-width: 490px; max-height: min(88dvh, 820px); padding: 0; overflow: auto; border: 1px solid #e2e8f1; border-radius: 22px; background: #fff; color: #253047; box-shadow: 0 24px 90px rgba(15,29,54,.25); }
+.app-form-dialog::backdrop, .app-confirm-dialog::backdrop { background: rgba(14,25,44,.48); backdrop-filter: blur(3px); }
+.app-dialog-header { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 22px 22px 16px; border-bottom: 1px solid #edf1f6; background: linear-gradient(135deg, #f5f8ff, #fff); }
+.app-dialog-header > div:nth-child(2) { min-width: 0; flex: 1; padding-top: 1px; }
+.app-dialog-mark { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; border: 1px solid #d7e4ff; border-radius: 14px; background: #eaf1ff; color: #1d50b6; font-size: 23px; }
+.app-dialog-mark--security { border-color: #cceee4; background: #eaf9f3; color: #087858; }
+.app-dialog-header h2 { margin: 2px 0 5px; font-size: 18px; line-height: 1.5; }
+.app-dialog-header p:not(.eyebrow) { margin: 0; color: #738096; font-size: 12px; line-height: 1.6; }
+.app-dialog-header .eyebrow { margin: 0 0 3px; }
+.app-dialog-close { display: grid; flex: 0 0 33px; width: 33px; height: 33px; place-items: center; border: 1px solid #e3e9f2; border-radius: 10px; background: #fff; color: #6d7789; font-size: 23px; cursor: pointer; }
+.account-modal-form { gap: 13px; padding: 19px 22px 22px; }
+.app-dialog-note { padding: 10px 12px; border: 1px solid #e1eafb; border-radius: 11px; background: #f6f9ff; color: #5d6f8b; font-size: 11px; line-height: 1.65; }
+.app-dialog-actions { display: flex; align-items: center; gap: 9px; padding-top: 2px; }
+.app-dialog-actions .button-wide { flex: 1; width: auto; min-height: 47px; }
+.app-dialog-actions .secondary-button { min-height: 47px; }
+.app-confirm-dialog { width: min(100% - 34px, 390px); padding: 25px; text-align: center; }
+.app-confirm-mark { display: grid; width: 58px; height: 58px; margin: 0 auto 14px; place-items: center; border: 1px solid #d8e5ff; border-radius: 19px; background: #eff4ff; color: #2154b5; font-size: 29px; }
+.app-confirm-dialog h2 { margin: 0 0 7px; color: #253249; font-size: 19px; }
+.app-confirm-dialog p { margin: 0 auto; max-width: 300px; color: #6d788a; font-size: 13px; line-height: 1.8; }
+.app-confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 22px; }
+.app-confirm-actions button { min-height: 45px; padding: 9px 10px; font-size: 12px; white-space: normal; }
+.logout-trigger { color: #a13d47; }
+.logout-trigger:hover { border-color: #f1cfd4; background: #fff3f4; color: #8c2633; }
+@media (max-width: 620px) {
+  .account-profile-hero { align-items: flex-start; padding: 16px; gap: 13px; }
+  .account-avatar-large { flex-basis: 54px; width: 54px; height: 54px; border-radius: 16px; font-size: 22px; }
+  .account-profile-hero .account-summary-text h2 { font-size: 18px; }
+  .account-settings-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .account-setting-card { padding: 14px; gap: 10px; }
+  .account-setting-icon { flex-basis: 42px; width: 42px; height: 42px; border-radius: 12px; }
+  .account-setting-action { font-size: 10px; }
+  .app-dialog-header { padding: 17px 16px 13px; gap: 10px; }
+  .app-dialog-header h2 { font-size: 16px; }
+  .account-modal-form { padding: 16px; }
+  .app-dialog-actions { flex-direction: column; align-items: stretch; }
+  .app-dialog-actions .button-wide, .app-dialog-actions .secondary-button { width: 100%; flex: auto; }
+  .app-confirm-dialog { padding: 22px 17px; border-radius: 19px; }
+  .app-confirm-actions { grid-template-columns: minmax(0, 1fr); }
+}
+
