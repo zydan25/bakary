@@ -216,6 +216,59 @@
     refresh();
   });
 
+  // Save a compact receipt to PNG using browser canvas; no external image service is required.
+  document.querySelectorAll("[data-save-receipt]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const lines = [
+        button.dataset.receiptTitle || "إيصال",
+        "نظام إدارة المخبز",
+        "الحساب: " + (button.dataset.receiptParty || ""),
+        "التاريخ: " + (button.dataset.receiptDate || ""),
+        "الكمية: " + (button.dataset.receiptQuantity || ""),
+        "الإجمالي/المدفوع: " + (button.dataset.receiptTotal || "") + " ريال",
+        button.dataset.receiptDetail || "",
+        "برمجة وتصميم م. زيدان العطاب",
+        "يمن كود للتقنيات الذكية"
+      ].filter(Boolean);
+      const canvas = document.createElement("canvas");
+      const width = 900;
+      const rowHeight = 58;
+      canvas.width = width * 2;
+      canvas.height = (lines.length * rowHeight + 70) * 2;
+      const context = canvas.getContext("2d");
+      context.scale(2, 2);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, canvas.height / 2);
+      context.fillStyle = "#1a56db";
+      context.fillRect(0, 0, width, 12);
+      context.direction = "rtl";
+      context.textAlign = "right";
+      context.fillStyle = "#182235";
+      context.font = "bold 28px Tahoma, Arial, sans-serif";
+      lines.forEach((line, index) => {
+        context.font = index === 0 ? "bold 30px Tahoma, Arial, sans-serif" : "bold 22px Tahoma, Arial, sans-serif";
+        context.fillStyle = index === 0 ? "#1a56db" : "#273246";
+        context.fillText(line, width - 36, 56 + index * rowHeight, width - 72);
+        if (index < lines.length - 1) {
+          context.strokeStyle = "#e2e7ef";
+          context.beginPath();
+          context.moveTo(30, 72 + index * rowHeight);
+          context.lineTo(width - 30, 72 + index * rowHeight);
+          context.stroke();
+        }
+      });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "bakary-receipt-" + (button.dataset.receiptDate || "today") + ".png";
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    });
+  });
+
   // Live card filtering with no full-page reload while typing.
   document.querySelectorAll("form[data-live-filter-target]").forEach((form) => {
     const search = form.querySelector("[name='q']");
