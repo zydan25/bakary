@@ -85,17 +85,46 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     recipient_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
     recipient_form.period_code.choices = _period_choices()
     default_product = next((row for row in products if row.is_default), products[0] if products else None)
-    if request.method == "GET" and issue_form.recipient_id.data in (None, 0):
-        issue_form.recipient_id.data = request.args.get("recipient_id", type=int) or 0
-    if request.method == "GET" and issue_form.product_id.data in (None, 0):
-        issue_form.product_id.data = default_product.id if default_product else 0
+    requested_recipient_id = request.args.get("recipient_id", type=int)
     if request.method == "GET":
+        issue_form.recipient_id.data = requested_recipient_id or 0
         issue_form.business_date.data = selected_date
         issue_form.period_code.data = selected_code
-        issue_form.quantity.data = None
         recipient_form.product_id.data = default_product.id if default_product else 0
         recipient_form.business_date.data = selected_date
         recipient_form.period_code.data = selected_code
+
+        # Prefill a recipient's next issue from their previous quantity and product.
+        if requested_recipient_id:
+            latest_issue = db.session.scalar(
+                select(FreeDistribution)
+                .where(FreeDistribution.recipient_id == requested_recipient_id)
+                .order_by(FreeDistribution.created_at.desc(), FreeDistribution.id.desc())
+                .limit(1)
+            )
+            current_recipient_issue = next(
+                (row for row in records if row.recipient_id == requested_recipient_id),
+                None,
+            )
+            preferred_issue = current_recipient_issue or latest_issue
+            if preferred_issue and any(row.id == preferred_issue.product_id for row in products):
+                issue_form.product_id.data = preferred_issue.product_id
+            else:
+                issue_form.product_id.data = default_product.id if default_product else 0
+            issue_form.quantity.data = preferred_issue.quantity if preferred_issue else None
+        else:
+            issue_form.product_id.data = default_product.id if default_product else 0
+            issue_form.quantity.data = None
+
+    selected_recipient_id = issue_form.recipient_id.data
+    selected_recipient = next(
+        (row for row in active_recipients if row.id == selected_recipient_id),
+        None,
+    )
+    selected_product = next(
+        (row for row in products if row.id == issue_form.product_id.data),
+        None,
+    )
     return render_template(
         "operations/free_distribution.html",
         recipients=recipients,
@@ -109,6 +138,8 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
         period_choices=_period_choices(),
         recipient_form=recipient_form,
         issue_form=issue_form,
+        selected_recipient=selected_recipient,
+        selected_issue_product=selected_product,
         show_recipient_form=action == "recipient" or (recipient_form is not None and bool(recipient_form.errors)),
         show_issue_form=action == "issue" or (issue_form is not None and bool(issue_form.errors)),
     )
@@ -228,19 +259,26 @@ def create_free_issue():
                 FreeDistribution.recipient_id == recipient.id,
                 FreeDistribution.product_id == product.id,
             ))
+            statement = (form.statement.data or "").strip() or None
             if existing:
-                raise ValueError("تم تسجيل صرف هذا الصنف لهذا المستفيد في الفترة نفسها بالفعل.")
-            record = FreeDistribution(
-                period_id=period.id,
-                recipient_id=recipient.id,
-                product_id=product.id,
-                quantity=form.quantity.data,
-                statement=(form.statement.data or "").strip() or None,
-                created_by_id=current_user.id,
-            )
-            db.session.add(record)
+                # A second entry for the same product/recipient in one period edits the
+                # current period quantity instead of violating the period uniqueness rule.
+                existing.quantity = form.quantity.data
+                existing.statement = statement
+                existing.created_by_id = current_user.id
+                flash("تم تحديث كمية الصرف المسجلة لهذا المستفيد في الفترة.", "success")
+            else:
+                record = FreeDistribution(
+                    period_id=period.id,
+                    recipient_id=recipient.id,
+                    product_id=product.id,
+                    quantity=form.quantity.data,
+                    statement=statement,
+                    created_by_id=current_user.id,
+                )
+                db.session.add(record)
+                flash("تم تسجيل الصرف المجاني واحتسابه ضمن الفترة.", "success")
             db.session.commit()
-            flash("تم تسجيل الصرف المجاني واحتسابه ضمن الفترة.", "success")
             return redirect(url_for(
                 "operations.free_distribution",
                 date=form.business_date.data.isoformat(),
