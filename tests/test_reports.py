@@ -11,7 +11,7 @@ from app.models.free_distribution import FreeDistribution, FreeRecipient
 from app.models.party import Party
 from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
-from app.models.role import Role
+from app.models.role import Permission, Role
 from app.models.user import User
 
 
@@ -124,5 +124,35 @@ def test_report_center_requires_authentication():
     app = setup()
     try:
         assert app.test_client().get("/reports/").status_code == 302
+    finally:
+        cleanup(app)
+
+
+
+def test_report_viewer_cannot_export_without_export_permission():
+    app = setup()
+    try:
+        with app.app_context():
+            viewer_role = Role(name="قارئ تقارير", code="reports_reader", is_system=False)
+            view_permission = Permission(
+                name="عرض التقارير", code="reports.view", description="عرض ملخصات مسموحة"
+            )
+            dashboard_permission = Permission(
+                name="عرض الرئيسية", code="dashboard.view", description="عرض الرئيسية"
+            )
+            viewer_role.permissions.extend([view_permission, dashboard_permission])
+            viewer = User(full_name="قارئ", phone="+967771234568", is_active=True)
+            viewer.set_password("Reader-pass-123")
+            viewer.roles.append(viewer_role)
+            db.session.add_all([viewer_role, view_permission, dashboard_permission, viewer])
+            db.session.commit()
+
+        client = app.test_client()
+        response = client.post("/auth/login", data={
+            "phone": "+967771234568", "password": "Reader-pass-123",
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert client.get("/reports/").status_code == 200
+        assert client.get("/reports/export.csv").status_code == 403
     finally:
         cleanup(app)
