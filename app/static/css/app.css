@@ -1326,3 +1326,42 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .product-detail-heading .heading-actions { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Operating period reporting and expected-vs-actual free distribution */
+.free-total-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-bottom: 14px; }
+.free-total-grid > article { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 13px 12px; border: 1px solid #e0e7f1; border-radius: 15px; background: #fff; box-shadow: 0 3px 12px rgba(20,32,52,.035); }
+.free-total-grid small { color: #69758a; font-size: 11px; line-height: 1.35; }
+.free-total-grid strong { color: #203450; font-size: 21px; font-weight: 900; overflow-wrap: anywhere; }
+.free-total-grid span { color: #80899a; font-size: 10px; line-height: 1.4; }
+.free-target-table { margin-top: 13px; }
+.period-report-card { display: block; color: inherit; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.period-report-card:hover { border-color: #cbd8ec; box-shadow: 0 5px 17px rgba(20,32,52,.07); transform: translateY(-1px); }
+.period-report-card .entity-top { margin-bottom: 12px; }
+.period-report-card .heading-subtitle { margin-top: 8px; }
+.period-report-list { gap: 10px; }
+.period-report-list .entity-card { min-width: 0; }
+.period-report-list .report-totals-grid { margin-top: 8px; }
+.period-report-list .status-badge { flex: 0 0 auto; }
+.product-history-row a { color: var(--primary); text-decoration: none; }
+.product-history-row a:hover { text-decoration: underline; }
+
+/* Cash account actions are stacked naturally on narrow screens. */
+.finance-account-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.finance-account-actions form { margin: 0; }
+.finance-account-actions .secondary-button,
+.finance-account-actions .quiet-button { min-height: 39px; }
+@media (max-width: 576px) {
+  .free-total-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .free-total-grid > article { padding: 10px 7px; border-radius: 12px; }
+  .free-total-grid small { font-size: 10px; }
+  .free-total-grid strong { font-size: 16px; }
+  .free-total-grid span { font-size: 9px; }
+  .period-report-card { padding: 12px; }
+  .period-report-card .entity-top { align-items: flex-start; }
+  .period-report-card .entity-main h2 { font-size: 14px; }
+  .period-report-card .entity-top .status-badge { font-size: 10px; padding: 4px 6px; }
+  .finance-account-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-account-actions > * { min-width: 0; }
+  .finance-account-actions .secondary-button,
+  .finance-account-actions .quiet-button { width: 100%; padding-inline: 7px; font-size: 12px; white-space: normal; }
+}
+
