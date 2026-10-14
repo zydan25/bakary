@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+{% block title %}الأصناف والأسعار{% endblock %}
+{% block page_heading %}الأصناف والأسعار{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div><p class="eyebrow">البيانات الأساسية</p><h1>الأصناف والأسعار</h1><p class="heading-subtitle">اضبط سعر الموزع والعميل وسعر بيع المحل لكل صنف.</p></div>
+  {% if can_manage %}<a class="primary-button" href="{{ url_for('products.index', action='new', status=status) }}">＋ إضافة صنف</a>{% endif %}
+</section>
+
+<form class="search-toolbar" method="get" action="{{ url_for('products.index') }}">
+  <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم الصنف أو رمزه" aria-label="بحث"></label>
+  <input type="hidden" name="status" value="{{ status }}">
+  <button type="submit" class="secondary-button">بحث</button>
+</form>
+<div class="filter-chips" role="group" aria-label="حالة الأصناف">
+  <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('products.index', status='active', q=query or None) }}">النشطة</a>
+  <a class="filter-chip {% if status == 'inactive' %}is-selected{% endif %}" href="{{ url_for('products.index', status='inactive', q=query or None) }}">الموقوفة</a>
+  <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for('products.index', status='all', q=query or None) }}">الكل</a>
+</div>
+
+<section class="entity-list" aria-label="قائمة الأصناف">
+  {% for item in items %}
+  <article class="entity-card">
+    <div class="entity-top">
+      <div class="entity-avatar product-avatar">♨</div>
+      <div class="entity-main"><h2>{{ item.name }}</h2><p>الرمز: <b>{{ item.code }}</b> · الوحدة: {{ item.unit_label }}</p></div>
+      {% if item.is_default %}<span class="status-badge status-primary">افتراضي</span>{% endif %}
+      {% if not item.is_active %}<span class="status-badge status-muted">موقوف</span>{% endif %}
+    </div>
+    <div class="price-summary-grid">
+      <div><small>سعر الموزع العام</small><strong>{{ "{:,.2f}".format(item.default_distributor_price) }} <small>ريال</small></strong></div>
+      <div><small>سعر العميل العام</small><strong>{{ "{:,.2f}".format(item.default_customer_price) }} <small>ريال</small></strong></div>
+      <div><small>بيع المحل</small><strong>{{ "{:,.2f}".format(item.shop_price) }} <small>ريال</small></strong></div>
+    </div>
+    {% if can_manage %}
+    <div class="entity-actions">
+      <a class="secondary-button" href="{{ url_for('products.index', edit=item.id, status=status, q=query or None) }}">تعديل الأسعار</a>
+      <form method="post" action="{{ url_for('products.toggle', product_id=item.id) }}" data-confirm="{% if item.is_active %}هل تريد إيقاف هذا الصنف؟{% else %}هل تريد تفعيل هذا الصنف؟{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="quiet-button" type="submit">{% if item.is_active %}إيقاف{% else %}تفعيل{% endif %}</button>
+      </form>
+    </div>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><div class="empty-symbol">▤</div><h2>لا توجد أصناف هنا</h2><p>جرّب تغيير البحث أو حالة العرض.</p></div>
+  {% endfor %}
+</section>
+
+<dialog class="form-dialog" id="product-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}">
+  <div class="dialog-header"><div><p class="eyebrow">بيانات الصنف</p><h2>{% if form.product_id.data %}تعديل الصنف{% else %}إضافة صنف جديد{% endif %}</h2></div><a class="dialog-close" href="{{ url_for('products.index', status=status) }}" aria-label="إغلاق">×</a></div>
+  <form method="post" class="form-stack">
+    {{ form.hidden_tag() }}
+    <div class="form-field">{{ form.name.label(class_="field-label") }}{{ form.name(class_="form-control", placeholder="مثال: روتي") }}{% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-row">
+      <div class="form-field">{{ form.code.label(class_="field-label") }}{{ form.code(class_="form-control", placeholder="ROTI", dir="ltr") }}{% for error in form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+      <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="حبة") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    </div>
+    <div class="form-field">{{ form.default_distributor_price.label(class_="field-label") }}{{ form.default_distributor_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.default_distributor_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-field">{{ form.default_customer_price.label(class_="field-label") }}{{ form.default_customer_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.default_customer_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <div class="form-field">{{ form.shop_price.label(class_="field-label") }}{{ form.shop_price(class_="form-control", inputmode="decimal", **{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.shop_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    <label class="check-row">{{ form.is_default() }} <span>{{ form.is_default.label.text }}</span></label>
+    <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ الحفظ...">حفظ الصنف</button><a class="secondary-button" href="{{ url_for('products.index', status=status) }}">إلغاء</a></div>
+  </form>
+</dialog>
+{% endblock %}
