@@ -14,9 +14,9 @@ class CashAccountForm(FlaskForm):
     code = StringField(
         "رمز الحساب",
         validators=[
-            DataRequired(message="رمز الحساب مطلوب."),
+            Optional(),
             Length(max=32),
-            Regexp(r"^[A-Za-z0-9_-]+$", message="استخدم أحرفًا لاتينية أو أرقامًا أو شرطة سفلية."),
+            Regexp(r"^[A-Za-z0-9_-]*$", message="رمز الحساب غير صالح."),
         ],
     )
     account_type = SelectField(
