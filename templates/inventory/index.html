@@ -57,10 +57,7 @@
   <form method="post" class="form-stack">
     {{ form.hidden_tag() }}
     <div class="form-field">{{ form.name.label(class_="field-label") }}{{ form.name(class_="form-control", placeholder="مثل: دقيق شتاء") }}{% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="form-row">
-      <div class="form-field">{{ form.code.label(class_="field-label") }}{{ form.code(class_="form-control", placeholder="FLOUR", dir="ltr") }}{% for error in form.code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-      <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="كجم") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    </div>
+    <div class="form-field">{{ form.unit_label.label(class_="field-label") }}{{ form.unit_label(class_="form-control", placeholder="كجم") }}{% for error in form.unit_label.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
     <div class="form-field">{{ form.reorder_level.label(class_="field-label") }}{{ form.reorder_level(class_="form-control", inputmode="decimal", **{'data-quantity-words':'true','data-unit':form.unit_label.data or 'كجم'}) }}{% for error in form.reorder_level.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
     <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ الحفظ...">حفظ المادة</button><a class="secondary-button" href="{{ url_for('inventory.index', status=status) }}">إلغاء</a></div>
   </form>
