@@ -17,8 +17,14 @@ class PeriodRuleError(ValueError):
 
 def period_mode():
     setting = db.session.scalar(select(Setting).where(Setting.key == "period_mode"))
+    if setting is None:
+        setting = db.session.scalar(
+            select(Setting).where(Setting.key == "operating_period_mode")
+        )
     value = setting.value if setting is not None else "daily"
-    return value if value in {"daily", "split"} else "daily"
+    if value in {"split", "morning_evening", "morning-evening"}:
+        return "split"
+    return "daily"
 
 
 def suggested_period_code():
