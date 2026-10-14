@@ -116,7 +116,7 @@
     {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('staff.employees') }}"><span class="dashboard-module-icon">{{ ui_icon('users', 32) }}</span><strong>الموظفون والصلاحيات</strong><small>حسابات الدخول وتعيين الأدوار</small></a>
     {% endif %}
-    {% if current_user.has_permission('production.manage') and current_user.has_permission('handover.manage') %}
+    {% if current_user.has_permission('handover.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('operations.closing') }}"><span class="dashboard-module-icon">{{ ui_icon('report', 32) }}</span><strong>إقفال الفترة والتسليم</strong><small>احتساب المبيعات والتالف والمتبقي والفروقات</small></a>
     {% elif current_user.has_permission('reports.view') %}
     <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('report', 32) }}</span><strong>التقارير النهائية</strong><small>تقارير المخبز اليومية</small><span class="module-stage-label">مرحلة قادمة</span></article>
