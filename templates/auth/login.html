@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block page_heading %}تسجيل الدخول{% endblock %}
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img src="{{ url_for('static', filename='icons/bakary.svg') }}" alt="" width="64" height="64">
+      <p class="eyebrow">BAKARY</p>
+      <h1>مرحبًا بعودتك</h1>
+      <p>سجّل الدخول لإدارة أعمال المخبز.</p>
+    </div>
+
+    <form method="post" class="form-stack" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="form-field">
+        {{ form.phone.label(class_="field-label") }}
+        {{ form.phone(class_="form-control", placeholder="رقم الهاتف", inputmode="tel", autocomplete="username", dir="ltr") }}
+        {% for error in form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      <div class="form-field">
+        {{ form.password.label(class_="field-label") }}
+        {{ form.password(class_="form-control", placeholder="كلمة المرور", autocomplete="current-password") }}
+        {% for error in form.password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      <label class="check-row">{{ form.remember() }} <span>{{ form.remember.label.text }}</span></label>
+      <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل الدخول...">تسجيل الدخول</button>
+    </form>
+    <a class="text-link recovery-link" href="{{ url_for('auth.forgot_password') }}">نسيت كلمة المرور؟</a>
+  </div>
+  <p class="auth-signature">برمجة وتصميم م. زيدان العطاب · 774952665<br>يمن كود للتقنيات الذكية</p>
+</section>
+{% endblock %}
