@@ -18,7 +18,7 @@
 <section class="entity-list" id="employee-list">
  {% for employee in items %}
  <article class="entity-card" data-searchable-card data-search-text="{{ employee.full_name }} {{ employee.phone or '' }} {{ employee.job_title or '' }}">
-  <div class="entity-top"><div class="entity-avatar">♙</div><div class="entity-main"><h2>{{ employee.full_name }}</h2><p>{{ employee.job_title or 'موظف' }} · {{ employee.phone or 'لا يوجد هاتف' }}</p></div><span class="status-badge {% if employee.is_active %}status-primary{% else %}status-muted{% endif %}">{{ 'نشط' if employee.is_active else 'موقوف' }}</span></div>
+  <div class="entity-top"><div class="entity-avatar">♙</div><div class="entity-main"><h2><a class="entity-title-link" href="{{ url_for('staff.employee_detail',employee_id=employee.id) }}">{{ employee.full_name }}</a></h2><p>{{ employee.job_title or 'موظف' }} · {{ employee.phone or 'لا يوجد هاتف' }}</p></div><span class="status-badge {% if employee.is_active %}status-primary{% else %}status-muted{% endif %}">{{ 'نشط' if employee.is_active else 'موقوف' }}</span></div>
   <div class="party-price-list">
    {% if employee.user %}
     <span class="party-price-chip">حساب دخول مرتبط</span>
