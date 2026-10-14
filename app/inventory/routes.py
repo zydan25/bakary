@@ -15,6 +15,7 @@ from app.services.inventory import (
     InventoryRuleError,
     create_inventory_item,
     inventory_balance,
+    inventory_valuation,
     register_stock_movement,
 )
 
@@ -83,12 +84,14 @@ def index():
             or_(InventoryItem.name.ilike(needle), InventoryItem.code.ilike(needle))
         )
     items = db.session.scalars(statement.order_by(InventoryItem.name.asc())).all()
-    balances = {item.id: inventory_balance(item.id) for item in items}
+    valuations = {item.id: inventory_valuation(item.id) for item in items}
+    balances = {item.id: valuations[item.id]["quantity"] for item in items}
 
     return render_template(
         "inventory/index.html",
         items=items,
         balances=balances,
+        valuations=valuations,
         low_count=sum(1 for item in items if item.is_active and balances.get(item.id, 0) <= item.reorder_level),
         query=query,
         status=status,
@@ -117,7 +120,7 @@ def stock():
             form.movement_type.data = "addition"
         form.business_date.data = date.today()
         form.quantity.data = None
-        form.request_id.data = str(uuid4().int % 9000000000000000000 + 1)
+        form.request_id.data = str(uuid4().int % 2000000000 + 1)
     elif not form.request_id.data:
         form.request_id.data = str(uuid4().int % 9000000000000000000 + 1)
 
@@ -133,6 +136,15 @@ def stock():
                 )
             )
             if existing_request is not None:
+                same_request = (
+                    existing_request.movement_type == form.movement_type.data
+                    and existing_request.quantity == form.quantity.data
+                    and existing_request.business_date == form.business_date.data
+                    and existing_request.unit_cost == form.unit_cost.data
+                    and (existing_request.statement or None) == ((form.statement.data or "").strip() or None)
+                )
+                if not same_request:
+                    raise InventoryRuleError("مفتاح هذا النموذج استُخدم لبيانات مختلفة. أعد فتح النموذج.")
                 flash("تم تسجيل هذه الحركة سابقًا؛ لم تُكرر.", "info")
                 return redirect(url_for("inventory.stock", item_id=item_id))
             
@@ -158,6 +170,7 @@ def stock():
                 business_date=form.business_date.data,
                 actor_id=current_user.id,
                 statement=form.statement.data,
+                unit_cost=form.unit_cost.data,
                 source_type="inventory_manual_request",
                 source_id=request_id,
             )
