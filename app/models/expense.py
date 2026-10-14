@@ -13,6 +13,7 @@ class Expense(TimestampMixin, db.Model):
     __tablename__ = "expenses"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
+        UniqueConstraint("request_key", name="uq_expenses_request_key"),
     )
 
     id = db.Column(Integer, primary_key=True)
@@ -26,6 +27,7 @@ class Expense(TimestampMixin, db.Model):
         Integer, ForeignKey("business_periods.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     statement = db.Column(Text, nullable=True)
+    request_key = db.Column(String(64), nullable=True)
     created_by_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
 
     cash_account = relationship("CashAccount")
