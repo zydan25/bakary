@@ -61,6 +61,10 @@
     {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
     <a class="quick-action" href="{{ url_for('products.index') }}"><span class="quick-action-plus">{{ ui_icon('list', 17) }}</span><span>الأصناف</span></a>
     {% endif %}
+    {% if current_user.has_permission('parties.manage') %}
+    <a class="quick-action" href="{{ url_for('parties.distributors', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة موزع</span></a>
+    <a class="quick-action" href="{{ url_for('parties.customers', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة عميل</span></a>
+    {% endif %}
     <a class="quick-action" href="{{ url_for('auth.account') }}"><span class="quick-action-plus">{{ ui_icon('person', 17) }}</span><span>حسابي</span></a>
   </div>
 </section>
@@ -72,7 +76,7 @@
     <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
     {% endif %}
     {% if current_user.has_permission('parties.view') or current_user.has_permission('parties.manage') %}
-    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('parties', 32) }}</span><strong>الموزعون والعملاء</strong><small>البيانات والأسعار الخاصة</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    <a class="dashboard-module module-ready" href="{{ url_for('parties.distributors') }}"><span class="dashboard-module-icon">{{ ui_icon('parties', 32) }}</span><strong>الموزعون والعملاء</strong><small>البطاقات والأسعار الخاصة والحسابات</small></a>
     {% endif %}
     {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
     <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('truck', 32) }}</span><strong>الصرف والتحصيل</strong><small>الصرف والدفع وكشوف الحساب</small><span class="module-stage-label">مرحلة قادمة</span></article>
