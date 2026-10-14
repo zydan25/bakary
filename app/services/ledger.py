@@ -224,37 +224,57 @@ def create_payment(
         raise
 
 
-def party_period_summary(party_id, start_date, end_date):
+def party_period_summary(party_id, start_date, end_date, period_code=None):
+    """Summarize a day or a single operating period, carrying earlier debts forward."""
     party = db.session.get(Party, party_id)
     if party is None:
         raise BusinessRuleError("الحساب المحدد غير موجود.")
 
     opening_balance = party_balance(party_id, before_date=start_date)
-    issue_rows = db.session.execute(
-        select(
-            func.coalesce(func.sum(DistributionIssue.quantity), 0),
-            func.coalesce(func.sum(DistributionIssue.total_amount), 0),
-            func.count(func.distinct(DistributionIssue.product_id)),
-            func.min(DistributionIssue.unit_price),
-            func.max(DistributionIssue.unit_price),
-        ).where(
-            DistributionIssue.party_id == party_id,
-            DistributionIssue.business_date >= start_date,
-            DistributionIssue.business_date <= end_date,
-        )
-    ).one()
-    payment_total = db.session.scalar(
-        select(func.coalesce(func.sum(PartyPayment.amount), 0)).where(
-            PartyPayment.party_id == party_id,
-            PartyPayment.business_date >= start_date,
-            PartyPayment.business_date <= end_date,
-        )
-    ) or 0
+    if period_code == "evening":
+        # The morning period on the same date is an opening balance for the evening.
+        morning_issues = db.session.scalar(
+            select(func.coalesce(func.sum(DistributionIssue.total_amount), 0)).where(
+                DistributionIssue.party_id == party_id,
+                DistributionIssue.business_date == start_date,
+                DistributionIssue.period_code == "morning",
+            )
+        ) or 0
+        morning_payments = db.session.scalar(
+            select(func.coalesce(func.sum(PartyPayment.amount), 0)).where(
+                PartyPayment.party_id == party_id,
+                PartyPayment.business_date == start_date,
+                PartyPayment.period_code == "morning",
+            )
+        ) or 0
+        opening_balance += Decimal(str(morning_issues)) - Decimal(str(morning_payments))
 
+    issue_stmt = select(
+        func.coalesce(func.sum(DistributionIssue.quantity), 0),
+        func.coalesce(func.sum(DistributionIssue.total_amount), 0),
+        func.count(func.distinct(DistributionIssue.product_id)),
+        func.min(DistributionIssue.unit_price),
+        func.max(DistributionIssue.unit_price),
+    ).where(
+        DistributionIssue.party_id == party_id,
+        DistributionIssue.business_date >= start_date,
+        DistributionIssue.business_date <= end_date,
+    )
+    payment_stmt = select(func.coalesce(func.sum(PartyPayment.amount), 0)).where(
+        PartyPayment.party_id == party_id,
+        PartyPayment.business_date >= start_date,
+        PartyPayment.business_date <= end_date,
+    )
+    if period_code is not None:
+        issue_stmt = issue_stmt.where(DistributionIssue.period_code == period_code)
+        payment_stmt = payment_stmt.where(PartyPayment.period_code == period_code)
+
+    issue_rows = db.session.execute(issue_stmt).one()
+    payment_total = db.session.scalar(payment_stmt) or 0
     quantity, issue_total, product_count, min_price, max_price = issue_rows
     opening_balance = Decimal(str(opening_balance))
     issue_total = Decimal(str(issue_total or 0))
-    payment_total = Decimal(str(payment_total or 0))
+    payment_total = Decimal(str(payment_total))
     total_due_before_payments = opening_balance + issue_total
     closing_balance = total_due_before_payments - payment_total
     unit_price = None
@@ -274,7 +294,6 @@ def party_period_summary(party_id, start_date, end_date):
         "unit_price": unit_price,
         "product_count": int(product_count or 0),
     }
-
 
 def last_issue(party_id):
     return db.session.scalar(
