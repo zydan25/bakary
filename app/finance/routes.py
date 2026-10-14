@@ -1,6 +1,7 @@
 """Cash-account administration, expenses and internal transfers."""
 
 from datetime import date
+from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -108,20 +109,25 @@ def expenses():
     if request.method == "GET":
         form.cash_account_id.data = main.id if main else (accounts[0].id if accounts else 0)
         form.business_date.data = date.today()
+        form.request_key.data = uuid4().hex
     if request.method == "POST":
         if not current_user.has_permission("expenses.manage"):
             abort(403)
         if form.validate_on_submit():
             try:
-                create_expense(
+                expense, created = create_expense(
                     title=form.title.data,
                     amount=form.amount.data,
                     cash_account_id=form.cash_account_id.data,
                     business_date=form.business_date.data,
                     statement=form.statement.data,
                     actor_id=current_user.id,
+                    request_key=form.request_key.data,
                 )
-                flash("تم تسجيل المصروف وحركة الصندوق.", "success")
+                flash(
+                    "تم تسجيل المصروف وحركة الصندوق." if created else "هذا المصروف مسجل بالفعل؛ لم يُكرر.",
+                    "success" if created else "info",
+                )
                 return redirect(url_for("finance.expenses"))
             except FinanceRuleError as exc:
                 flash(str(exc), "error")
@@ -158,20 +164,25 @@ def transfers():
         form.source_account_id.data = main.id if main else (accounts[0].id if accounts else 0)
         form.target_account_id.data = other.id if other else 0
         form.business_date.data = date.today()
+        form.request_key.data = uuid4().hex
     if request.method == "POST":
         if not current_user.has_permission("finance.manage"):
             abort(403)
         if form.validate_on_submit():
             try:
-                create_cash_transfer(
+                transfer, created = create_cash_transfer(
                     source_account_id=form.source_account_id.data,
                     target_account_id=form.target_account_id.data,
                     amount=form.amount.data,
                     business_date=form.business_date.data,
                     statement=form.statement.data,
                     actor_id=current_user.id,
+                    request_key=form.request_key.data,
                 )
-                flash("تم التحويل بين الحسابين وتسجيل الحركتين.", "success")
+                flash(
+                    "تم التحويل بين الحسابين وتسجيل الحركتين." if created else "هذا التحويل مسجل بالفعل؛ لم يُكرر.",
+                    "success" if created else "info",
+                )
                 return redirect(url_for("finance.transfers"))
             except FinanceRuleError as exc:
                 flash(str(exc), "error")
