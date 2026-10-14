@@ -269,6 +269,21 @@
     });
   });
 
+  // Whole profile cards can be opened by clicking empty space or using Enter/Space.
+  document.querySelectorAll("[data-card-navigation]").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, form, input, select, textarea, label, summary")) return;
+      window.location.href = card.dataset.cardNavigation;
+    });
+    card.addEventListener("keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " ") && event.target === card) {
+        event.preventDefault();
+        window.location.href = card.dataset.cardNavigation;
+      }
+    });
+    card.style.cursor = "pointer";
+  });
+
   // Live card filtering with no full-page reload while typing.
   document.querySelectorAll("form[data-live-filter-target]").forEach((form) => {
     const search = form.querySelector("[name='q']");
