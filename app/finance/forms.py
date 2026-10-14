@@ -29,7 +29,7 @@ class CashAccountForm(FlaskForm):
         places=2,
         default=Decimal("0.00"),
         validators=[
-            DataRequired(message="أدخل الرصيد الافتتاحي، ولو صفرًا."),
+            Optional(),
             NumberRange(min=Decimal("0.00"), message="الرصيد الافتتاحي لا يمكن أن يكون سالبًا."),
         ],
     )
