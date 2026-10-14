@@ -1,7 +1,7 @@
 """Import every ORM model so Flask-Migrate sees complete metadata."""
 
 from app.models.audit import AuditLog
-from app.models.closing import PeriodCloseProduct, PeriodHandover
+from app.models.closing import PeriodCloseProduct, PeriodHandover, PeriodRawMaterialClose
 from app.models.distribution import DistributionIssue, PartyLedgerEntry, PartyPayment
 from app.models.employee import Employee
 from app.models.expense import CashTransfer, Expense
@@ -35,6 +35,7 @@ __all__ = [
     "PartyPrice",
     "PeriodCloseProduct",
     "PeriodHandover",
+    "PeriodRawMaterialClose",
     "PeriodIngredientUsage",
     "Permission",
     "Product",
