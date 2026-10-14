@@ -7,7 +7,7 @@
   {% if can_manage %}<a class="primary-button" href="{{ url_for('products.index', action='new', status=status) }}">＋ إضافة صنف</a>{% endif %}
 </section>
 
-<form class="search-toolbar" method="get" action="{{ url_for('products.index') }}">
+<form class="search-toolbar" data-live-filter-target="#product-entity-list" method="get" action="{{ url_for('products.index') }}">
   <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم الصنف أو رمزه" aria-label="بحث"></label>
   <input type="hidden" name="status" value="{{ status }}">
   <button type="submit" class="secondary-button">بحث</button>
@@ -18,9 +18,9 @@
   <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for('products.index', status='all', q=query or None) }}">الكل</a>
 </div>
 
-<section class="entity-list" aria-label="قائمة الأصناف">
+<section class="entity-list" id="product-entity-list" aria-label="قائمة الأصناف">
   {% for item in items %}
-  <article class="entity-card">
+  <article class="entity-card" data-searchable-card data-search-text="{{ item.name }} {{ item.code }}">
     <div class="entity-top">
       <div class="entity-avatar product-avatar">♨</div>
       <div class="entity-main"><h2>{{ item.name }}</h2><p>الرمز: <b>{{ item.code }}</b> · الوحدة: {{ item.unit_label }}</p></div>
