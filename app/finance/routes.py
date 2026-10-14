@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.extensions import db
 from app.finance import finance_bp
