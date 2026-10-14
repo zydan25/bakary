@@ -155,6 +155,32 @@
     });
   }
 
+  // Exiting the installed web app is separate from logging out. Keep the session intact.
+  const exitDialog = document.getElementById("exit-confirm-dialog");
+  if (exitDialog) {
+    const cancelExit = exitDialog.querySelector("[data-cancel-exit]");
+    const confirmExit = exitDialog.querySelector("[data-confirm-exit]");
+    const exitMessage = exitDialog.querySelector("#exit-confirm-message");
+
+    if (cancelExit) cancelExit.addEventListener("click", () => exitDialog.close());
+    if (confirmExit) confirmExit.addEventListener("click", () => {
+      // Cordova-like shells expose a native exit API; ordinary browser/PWA windows do not.
+      try {
+        if (window.navigator.app && typeof window.navigator.app.exitApp === "function") {
+          window.navigator.app.exitApp();
+          return;
+        }
+      } catch (_) {}
+
+      try { window.close(); } catch (_) {}
+      window.setTimeout(() => {
+        if (exitMessage && document.visibilityState !== "hidden") {
+          exitMessage.textContent = "لا يسمح المتصفح عادةً بإغلاق نافذة التطبيق تلقائيًا. أغلق نافذة التطبيق من الهاتف عند الحاجة؛ لن يتم تسجيل خروجك وستبقى جلستك محفوظة.";
+        }
+      }, 350);
+    });
+  }
+
   // Instant Arabic amount and quantity wording. The server still validates monetary values.
   const digitMap = { "٠":"0", "١":"1", "٢":"2", "٣":"3", "٤":"4", "٥":"5", "٦":"6", "٧":"7", "٨":"8", "٩":"9",
     "۰":"0", "۱":"1", "۲":"2", "۳":"3", "۴":"4", "۵":"5", "۶":"6", "۷":"7", "۸":"8", "۹":"9" };
