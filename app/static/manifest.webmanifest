@@ -5,7 +5,7 @@
   "description": "إدارة الموزعين والعملاء والإنتاج والمخزون والحسابات",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "/",
+  "start_url": "/dashboard/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
