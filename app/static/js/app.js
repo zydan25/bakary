@@ -50,16 +50,21 @@
     }
   });
 
-  let activeSection = null;
-  document.querySelectorAll("[data-nav-link]").forEach((link) => {
+  const currentPath = window.location.pathname.replace(/\\/+$/, "") || "/";
+  const routeCandidates = [...document.querySelectorAll("[data-nav-link]")].map((link) => {
     try {
       const target = new URL(link.href, window.location.origin);
-      if (target.pathname === window.location.pathname) {
-        link.classList.add("is-active");
-        activeSection = link.closest("[data-nav-section]");
-      }
-    } catch (_) {}
-  });
+      const linkPath = target.pathname.replace(/\\/+$/, "") || "/";
+      const matches = currentPath === linkPath || (linkPath !== "/" && currentPath.startsWith(linkPath + "/"));
+      return matches ? { link, linkPath, section: link.closest("[data-nav-section]") } : null;
+    } catch (_) {
+      return null;
+    }
+  }).filter(Boolean).sort((a, b) => b.linkPath.length - a.linkPath.length);
+
+  const activeCandidate = routeCandidates[0];
+  const activeSection = activeCandidate ? activeCandidate.section : null;
+  if (activeCandidate) activeCandidate.link.classList.add("is-active");
 
   if (activeSection) {
     sections.forEach((section) => setSection(section, section === activeSection, false));
