@@ -122,3 +122,31 @@ def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
         assert "اختصار مخفي" not in html
     finally:
         cleanup(app)
+
+def test_install_name_is_configurable_and_restorable():
+    app, _ids = setup()
+    try:
+        client = app.test_client()
+        login(client)
+        initial = client.get("/manifest.webmanifest").get_json()
+        assert initial["name"] == "نظام إدارة المخبز"
+        assert initial["short_name"] != "Bakary"
+
+        saved = client.post("/settings/", data={
+            "action": "save_pwa_settings",
+            "pwa_app_name": "مخبز العطاب",
+            "pwa_app_short_name": "مخبز العطاب",
+        }, follow_redirects=True)
+        assert saved.status_code == 200
+        manifest = client.get("/manifest.webmanifest").get_json()
+        assert manifest["name"] == "مخبز العطاب"
+        assert manifest["short_name"] == "مخبز العطاب"
+
+        reset = client.post("/settings/", data={"action": "restore_pwa_defaults"}, follow_redirects=True)
+        assert reset.status_code == 200
+        restored = client.get("/manifest.webmanifest").get_json()
+        assert restored["name"] == "نظام إدارة المخبز"
+        assert restored["short_name"] != "Bakary"
+    finally:
+        cleanup(app)
+
