@@ -9,7 +9,6 @@ from flask_login import current_user, login_required
 from sqlalchemy import select
 
 from app.extensions import db
-from app.inventory import inventory_bp
 from app.models.inventory import InventoryItem
 from app.models.production import BusinessPeriod, DoughBatch, PeriodIngredientUsage
 from app.models.product import Product
@@ -173,6 +172,7 @@ def _page_context(
         saved_batch=saved_batch,
         can_manage=current_user.has_permission("production.manage"),
         item_units={str(item.id): item.unit_label for item in inventory_rows},
+        product_units={str(product.id): product.unit_label for product in product_rows},
     )
 
 
