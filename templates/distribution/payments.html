@@ -1,0 +1,43 @@
+{% extends "layouts/base.html" %}
+{% block title %}سجل الدفعات{% endblock %}
+{% block page_heading %}سجل الدفعات{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">الصرف والتحصيل</p><h1>سجل الدفعات</h1><p class="heading-subtitle">كل دفعات الموزعين والعملاء، بما في ذلك القيد المالي وحركة الصندوق المرتبطة بها.</p></div>
+ <div class="heading-actions"><a class="primary-button" href="{{ url_for('distribution.payment',party_type='all') }}">＋ تسجيل دفعة</a></div>
+</section>
+<form class="content-card record-filter-toolbar" method="get" action="{{ url_for('distribution.payment_records') }}" data-live-filter-target="#payment-record-list">
+ <div class="record-filter-grid">
+  <div class="form-field"><label class="field-label" for="payment-q">بحث فوري</label><input class="form-control" id="payment-q" type="search" name="q" value="{{ query_text }}" placeholder="ابحث باسم الحساب أو البيان..."></div>
+  <div class="form-field"><label class="field-label" for="payment-party-type">نوع الحساب</label><select class="form-control" id="payment-party-type" name="party_type" data-searchable="true" data-live-submit><option value="all" {% if party_type == 'all' %}selected{% endif %}>الكل</option><option value="distributor" {% if party_type == 'distributor' %}selected{% endif %}>الموزعون</option><option value="customer" {% if party_type == 'customer' %}selected{% endif %}>العملاء</option></select></div>
+  <div class="form-field"><label class="field-label" for="payment-period">الفترة</label><select class="form-control" id="payment-period" name="period_id" data-searchable="true" data-live-submit><option value="">كل الفترات</option>{% for period in periods %}<option value="{{ period.id }}" {% if selected_period_id == period.id %}selected{% endif %}>{{ period_day_name(period.business_date) }} · {{ period_label(period.period_code) }} · {{ 'مفتوحة' if period.status == 'open' else 'مختتمة' }}</option>{% endfor %}</select></div>
+ </div>
+ <noscript><button class="secondary-button" type="submit">تطبيق المرشحات</button></noscript>
+</form>
+<section id="payment-record-list" class="distribution-record-list">
+ {% for item in items %}
+ {% set row = item.transaction %}
+ <article class="content-card distribution-record-card" data-searchable-card data-search-text="{{ row.party.name }} {{ row.statement or '' }} {{ row.period_code }} {{ row.business_date }}">
+  <div class="distribution-record-top">
+   <div class="distribution-record-icon payment-record-icon">ر.ي</div>
+   <div class="distribution-record-heading"><h2>{{ row.party.name }}</h2><p>دفعة رقم {{ row.id }}{% if row.statement %} · {{ row.statement }}{% endif %}</p></div>
+   <strong class="distribution-record-amount payment-record-amount">{{ "{:,.2f}".format(row.amount) }} <small>ريال</small></strong>
+  </div>
+  <div class="distribution-record-meta">
+   <span>{{ period_day_name(row.business_date) }} · {{ period_label(row.period_code) }}</span>
+   <span>{% if item.period %}{{ 'فترة مفتوحة' if item.period.status == 'open' else 'فترة مختتمة' }}{% else %}فترة غير معرّفة{% endif %}</span>
+   <span>{{ row.created_at.strftime('%H:%M') if row.created_at else '' }}</span>
+  </div>
+  <div class="distribution-record-actions">
+   {% if item.editable %}
+   <a class="secondary-button" href="{{ url_for('distribution.edit_payment',payment_id=row.id) }}">تعديل الدفعة</a>
+   <form method="post" action="{{ url_for('distribution.delete_payment',payment_id=row.id) }}" data-confirm="سيتم حذف الدفعة وقيد الحساب وحركة الصندوق المرتبطة بها بالكامل من الفترة المفتوحة. هل تريد المتابعة؟">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="danger-button">حذف الدفعة والقيد</button>
+   </form>
+   {% else %}<span class="locked-period-note">لا يمكن التعديل أو الحذف بعد إقفال الفترة</span>{% endif %}
+  </div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا توجد دفعات</h2><p>لم تُسجل دفعات تطابق المرشحات الحالية.</p><a class="primary-button" href="{{ url_for('distribution.payment',party_type='all') }}">تسجيل أول دفعة</a></div>{% endfor %}
+</section>
+{% endblock %}
