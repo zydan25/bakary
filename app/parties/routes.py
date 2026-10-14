@@ -193,7 +193,7 @@ def customers():
     return _party_page("customer")
 
 
-@parties_bp.get("/")
+@parties_bp.get("/parties/")
 @login_required
 def index():
     """Combined directory for distributors and customers."""
