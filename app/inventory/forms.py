@@ -73,3 +73,18 @@ class StockMovementForm(FlaskForm):
     )
     request_id = HiddenField(validators=[DataRequired(message="أعد فتح النموذج وحاول مجددًا.")])
     submit = SubmitField("تسجيل المخزون")
+
+
+class StockCorrectionForm(FlaskForm):
+    corrected_quantity = DecimalField(
+        "الكمية الصحيحة لهذه الحركة",
+        places=3,
+        validators=[
+            DataRequired(message="أدخل الكمية الصحيحة."),
+            NumberRange(min=Decimal("0.000"), message="الكمية لا يمكن أن تكون سالبة."),
+        ],
+    )
+    reason = TextAreaField(
+        "سبب التصحيح",
+        validators=[DataRequired(message="اكتب سبب التصحيح للحفاظ على سجل المراجعة."), Length(max=1000)],
+    )
