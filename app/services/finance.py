@@ -76,6 +76,23 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
     title = (title or "").strip()
     if not title:
         raise FinanceRuleError("اسم المصروف مطلوب.")
+    business_date = business_date or date.today()
+    key = (request_key or "").strip()
+    if not key:
+        raise FinanceRuleError("انتهت صلاحية نموذج المصروف. أعد فتحه وحاول مجددًا.")
+    prior = db.session.scalar(select(Expense).where(Expense.request_key == key))
+    if prior is not None:
+        same_payload = (
+            prior.title == title
+            and prior.amount == amount
+            and prior.cash_account_id == cash_account_id
+            and prior.business_date == business_date
+            and (prior.statement or None) == ((statement or "").strip() or None)
+            and prior.period_id == period_id
+        )
+        if not same_payload:
+            raise FinanceRuleError("مفتاح هذا النموذج استُخدم لبيانات مختلفة. افتح نموذجًا جديدًا.")
+        return prior, False
     account = db.session.scalar(
         select(CashAccount).where(
             CashAccount.id == cash_account_id,
@@ -86,17 +103,11 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
         raise FinanceRuleError("الحساب النقدي غير موجود أو موقوف.")
     if cash_account_balance(account.id) < amount:
         raise FinanceRuleError("رصيد الحساب لا يكفي لتسجيل هذا المصروف.")
-    key = (request_key or "").strip()
-    if not key:
-        raise FinanceRuleError("انتهت صلاحية نموذج المصروف. أعد فتحه وحاول مجددًا.")
-    prior = db.session.scalar(select(Expense).where(Expense.request_key == key))
-    if prior is not None:
-        return prior, False
     expense = Expense(
         title=title,
         amount=amount,
         cash_account_id=account.id,
-        business_date=business_date or date.today(),
+        business_date=business_date,
         period_id=period_id,
         statement=(statement or "").strip() or None,
         request_key=key,
@@ -131,6 +142,22 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
 
 def create_cash_transfer(*, source_account_id, target_account_id, amount, business_date=None, statement=None, actor_id=None, request_key=None):
     amount = money(amount)
+    business_date = business_date or date.today()
+    key = (request_key or "").strip()
+    if not key:
+        raise FinanceRuleError("انتهت صلاحية نموذج التحويل. أعد فتحه وحاول مجددًا.")
+    prior = db.session.scalar(select(CashTransfer).where(CashTransfer.request_key == key))
+    if prior is not None:
+        same_payload = (
+            prior.source_account_id == source_account_id
+            and prior.destination_account_id == target_account_id
+            and prior.amount == amount
+            and prior.business_date == business_date
+            and (prior.statement or None) == ((statement or "").strip() or None)
+        )
+        if not same_payload:
+            raise FinanceRuleError("مفتاح هذا النموذج استُخدم لبيانات مختلفة. افتح نموذج تحويل جديدًا.")
+        return prior, False
     if source_account_id == target_account_id:
         raise FinanceRuleError("اختر حسابين مختلفين للتحويل.")
     source = db.session.scalar(
@@ -150,18 +177,12 @@ def create_cash_transfer(*, source_account_id, target_account_id, amount, busine
     if cash_account_balance(source.id) < amount:
         raise FinanceRuleError("رصيد حساب المصدر لا يكفي للتحويل.")
 
-    key = (request_key or "").strip()
-    if not key:
-        raise FinanceRuleError("انتهت صلاحية نموذج التحويل. أعد فتحه وحاول مجددًا.")
-    prior = db.session.scalar(select(CashTransfer).where(CashTransfer.request_key == key))
-    if prior is not None:
-        return prior, False
     transfer = CashTransfer(
         request_key=key,
         source_account_id=source.id,
         destination_account_id=target.id,
         amount=amount,
-        business_date=business_date or date.today(),
+        business_date=business_date,
         statement=(statement or "").strip() or None,
         created_by_id=actor_id,
     )
