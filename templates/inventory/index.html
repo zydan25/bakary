@@ -9,7 +9,7 @@
 
 <section class="content-card stock-overview">
   <div class="section-title"><div><h2>نظرة عامة</h2><p>المواد الظاهرة حسب مرشح العرض.</p></div></div>
-  <div class="report-totals-grid"><div><small>عدد المواد</small><strong>{{ items|length }}</strong></div><div><small>منخفضة المخزون</small><strong>{{ items|selectattr('is_active')|list|length and items|selectattr('is_active')|list|length or 0 }}</strong></div><div><small>حالة التتبع</small><strong>دفتر حركات</strong></div></div>
+  <div class="report-totals-grid"><div><small>عدد المواد</small><strong>{{ items|length }}</strong></div><div><small>منخفضة المخزون</small><strong>{{ low_count }}</strong></div><div><small>حالة التتبع</small><strong>دفتر حركات</strong></div></div>
 </section>
 
 <form class="search-toolbar" data-live-filter-target="#inventory-item-list" method="get" action="{{ url_for('inventory.index') }}">
