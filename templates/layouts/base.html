@@ -89,6 +89,29 @@
         </section>
         {% endif %}
 
+        {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
+        <section class="tree-section" data-nav-section="distribution">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">↗</span><span class="tree-heading-title">الصرف والتحصيل</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            {% if current_user.has_permission('distribution.issue') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='distributor') }}"><span class="child-symbol">↗</span><span>صرف موزع</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue', party_type='customer') }}"><span class="child-symbol">↗</span><span>صرف عميل</span></a>
+            {% endif %}
+            {% if current_user.has_permission('distribution.payment') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='distributor') }}"><span class="child-symbol">ر.ي</span><span>دفع موزع</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.payment', party_type='customer') }}"><span class="child-symbol">ر.ي</span><span>دفع عميل</span></a>
+            {% endif %}
+            {% if current_user.has_permission('distribution.reports') %}
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_report', party_type='distributor') }}"><span class="child-symbol">▤</span><span>تقرير صرف الموزعين</span></a>
+            <a class="tree-link" data-nav-link href="{{ url_for('distribution.issue_report', party_type='customer') }}"><span class="child-symbol">▤</span><span>تقرير صرف العملاء</span></a>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
+
         <section class="tree-section" data-nav-section="access">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
             <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
