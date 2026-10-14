@@ -1,5 +1,7 @@
 from decimal import Decimal
+from io import BytesIO
 
+from PIL import Image
 from sqlalchemy import select
 
 from app import create_app
@@ -145,6 +147,33 @@ def test_install_name_is_configurable_and_restorable():
         restored = client.get("/manifest.webmanifest").get_json()
         assert restored["name"] == "نظام إدارة المخبز"
         assert restored["short_name"] != "Bakary"
+    finally:
+        cleanup(app)
+
+def test_install_icon_upload_generates_installable_png_sizes():
+    app, _ids = setup()
+    try:
+        client = app.test_client()
+        login(client)
+        image_stream = BytesIO()
+        Image.new("RGB", (64, 64), "blue").save(image_stream, format="PNG")
+        image_stream.seek(0)
+
+        response = client.post("/settings/", data={
+            "action": "save_pwa_settings",
+            "pwa_app_name": "مخبز الاختبار",
+            "pwa_app_short_name": "المخبز",
+            "app_icon": (image_stream, "icon.png"),
+        }, content_type="multipart/form-data", follow_redirects=True)
+        assert response.status_code == 200
+        manifest = client.get("/manifest.webmanifest").get_json()
+        assert {icon["sizes"] for icon in manifest["icons"]} == {"192x192", "512x512"}
+        for icon in manifest["icons"]:
+            result = client.get(icon["src"])
+            assert result.status_code == 200
+            assert result.mimetype == "image/png"
+
+        client.post("/settings/", data={"action": "restore_pwa_defaults"}, follow_redirects=True)
     finally:
         cleanup(app)
 
