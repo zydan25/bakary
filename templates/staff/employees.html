@@ -1,0 +1,54 @@
+{% extends "layouts/base.html" %}
+{% block title %}الموظفون{% endblock %}
+{% block page_heading %}الموظفون{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">إدارة الفريق</p><h1>الموظفون</h1><p class="heading-subtitle">كل موظف له ملف مستقل، ويمكن ربطه بحساب دخول وأدوار وصلاحيات.</p></div>
+ <div class="heading-actions"><a class="secondary-button" href="{{ url_for('staff.roles') }}">الأدوار والصلاحيات</a><a class="primary-button" href="{{ url_for('staff.employees', action='new', status=status) }}">＋ إضافة موظف</a></div>
+</section>
+<form class="search-toolbar" data-live-filter-target="#employee-list" method="get">
+ <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم الموظف أو الهاتف" autocomplete="off" aria-label="بحث فوري"></label>
+ <input type="hidden" name="status" value="{{ status }}"><button class="secondary-button" type="submit">بحث</button>
+</form>
+<div class="filter-chips">
+ <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('staff.employees',status='active',q=query or None) }}">النشطون</a>
+ <a class="filter-chip {% if status == 'inactive' %}is-selected{% endif %}" href="{{ url_for('staff.employees',status='inactive',q=query or None) }}">الموقوفون</a>
+ <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for('staff.employees',status='all',q=query or None) }}">الكل</a>
+</div>
+<section class="entity-list" id="employee-list">
+ {% for employee in items %}
+ <article class="entity-card" data-searchable-card data-search-text="{{ employee.full_name }} {{ employee.phone or '' }} {{ employee.job_title or '' }}">
+  <div class="entity-top"><div class="entity-avatar">♙</div><div class="entity-main"><h2>{{ employee.full_name }}</h2><p>{{ employee.job_title or 'موظف' }} · {{ employee.phone or 'لا يوجد هاتف' }}</p></div><span class="status-badge {% if employee.is_active %}status-primary{% else %}status-muted{% endif %}">{{ 'نشط' if employee.is_active else 'موقوف' }}</span></div>
+  <div class="party-price-list">
+   {% if employee.user %}
+    <span class="party-price-chip">حساب دخول مرتبط</span>
+    {% for role in employee.user.roles %}<span class="party-price-chip">{{ role.name }}</span>{% endfor %}
+   {% else %}<span class="party-price-chip">لا يوجد حساب دخول</span>{% endif %}
+  </div>
+  {% if employee.notes %}<p class="heading-subtitle">{{ employee.notes }}</p>{% endif %}
+  <div class="entity-actions"><a class="secondary-button" href="{{ url_for('staff.employees',action='edit',edit=employee.id,status=status,q=query or None) }}">تعديل الموظف والصلاحيات</a></div>
+ </article>
+ {% else %}<div class="empty-state"><div class="empty-symbol">♙</div><h2>لا يوجد موظفون هنا</h2><p>أضف ملف الموظف ورقم هاتفه، ثم عيّن الدور الذي يناسب عمله.</p></div>{% endfor %}
+</section>
+
+<dialog class="form-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}" id="employee-dialog">
+ <div class="dialog-header"><div><p class="eyebrow">بيانات الفريق</p><h2>{% if editing_employee_id %}تعديل الموظف{% else %}إضافة موظف{% endif %}</h2></div><a class="dialog-close" href="{{ url_for('staff.employees',status=status) }}" aria-label="إغلاق">×</a></div>
+ <form method="post" class="form-stack">
+  {{ form.hidden_tag() }}
+  <div class="form-field">{{ form.full_name.label(class_="field-label") }}{{ form.full_name(class_="form-control",placeholder="اسم الموظف") }}{% for error in form.full_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.phone.label(class_="field-label") }}{{ form.phone(class_="form-control",placeholder="رقم الهاتف مع أو بدون مفتاح الدولة",inputmode="tel",dir="ltr") }}{% for error in form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.job_title.label(class_="field-label") }}{{ form.job_title(class_="form-control",placeholder="مثل: مسؤول التوزيع") }}</div>
+  <div class="form-field">{{ form.user_password.label(class_="field-label") }}{{ form.user_password(class_="form-control",placeholder="8 أحرف على الأقل للحساب الجديد",autocomplete="new-password") }}<small class="subtle-hint">إذا كان رقم الهاتف مرتبطًا بحساب، لا يلزم إدخال كلمة مرور إلا إذا أردت تغييرها.</small>{% for error in form.user_password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field"><label class="field-label">أدوار الموظف</label><small class="subtle-hint">اختر الدور أو الأدوار. تتحدد قوائم النظام حسب الصلاحيات الممنوحة.</small>
+   <div class="role-check-list">
+   {% for role in roles %}
+    <label class="role-check-item"><input type="checkbox" name="role_codes" value="{{ role.code }}" {% if role.code in selected_role_codes %}checked{% elif not selected_role_codes and role.code == 'distribution' %}checked{% endif %}><span><strong>{{ role.name }}</strong><small>{{ role.description or '' }}</small></span></label>
+   {% else %}<small class="field-error">لا توجد أدوار. نفّذ الأمر seed-roles أولًا.</small>{% endfor %}
+   </div>
+  </div>
+  <div class="form-field">{{ form.notes.label(class_="field-label") }}{{ form.notes(class_="form-control",rows="2",placeholder="ملاحظات اختيارية") }}</div>
+  <label class="check-row">{{ form.is_active() }} الموظف نشط ويمكنه الدخول إذا كان لديه حساب</label>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ الموظف</button><a class="secondary-button" href="{{ url_for('staff.employees',status=status) }}">إلغاء</a></div>
+ </form>
+</dialog>
+{% endblock %}
