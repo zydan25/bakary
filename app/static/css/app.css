@@ -859,3 +859,80 @@ textarea.form-control { min-height: 84px; resize: vertical; }
 @media (max-width: 390px) {
   .role-selector-list { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* Polished home screen and navigation adjustments */
+.tree-root-link { min-height: 43px; margin: 3px 0; padding: 10px 12px; border: 1px solid transparent; border-radius: 11px; }
+.tree-root-link .nav-symbol { display: inline-grid; flex: 0 0 23px; width: 23px; place-items: center; font-size: 19px; color: var(--primary); }
+.tree-root-link:hover, .tree-root-link[aria-current="page"] { border-color: #dbe6fb; background: #f0f5ff; color: #1748ae; }
+.quick-actions-card { border: 1px solid #e1e7f0; border-radius: 16px; box-shadow: 0 4px 15px rgba(20,32,52,.035); }
+.quick-action-list { gap: 7px; border: 0; padding: 0; background: transparent; }
+.quick-action { min-height: 42px; border-radius: 12px; font-size: 12px; padding: 6px 7px; }
+.dashboard-module-grid { gap: 8px; }
+.dashboard-module { min-height: 112px; gap: 6px; padding: 11px 8px; border-radius: 15px; background: linear-gradient(180deg,#fff,#f7faff); border-color: #dfe6f1; box-shadow: 0 3px 10px rgba(22,40,78,.045); }
+.dashboard-module.module-ready { background: linear-gradient(180deg,#fff,#f7faff); }
+.dashboard-module-icon { width: 42px; height: 42px; border-radius: 13px; background: #eaf1ff; color: #1a56db; }
+.dashboard-module strong { font-size: 14px; }
+.dashboard-module small { font-size: 11px; }
+.dashboard-signature { display: flex; width: min(100%, 520px); align-items: center; flex-direction: column; gap: 2px; margin: 23px auto 8px; padding: 0 8px; text-align: center; background: transparent; border: 0; box-shadow: none; color: #7a8495; font-size: 11px; line-height: 1.45; }
+.dashboard-signature strong { color: #4a5568; font-size: 13px; font-weight: 700; }
+.dashboard-signature span { font-size: 11px; }
+.section-title > h2 { margin: 0; font-size: 17px; }
+.quick-actions-card .section-title { margin-bottom: 10px; }
+.dashboard-modules-section .section-title { margin-bottom: 10px; }
+@media (max-width: 576px) {
+  .dashboard-module { min-height: 101px; padding: 9px 6px; gap: 5px; }
+  .dashboard-module-icon { width: 37px; height: 37px; flex-basis: 37px; border-radius: 11px; }
+  .dashboard-module-icon .ui-icon { width: 24px; height: 24px; }
+  .dashboard-module strong { font-size: 12.5px; }
+  .dashboard-signature { margin-top: 18px; }
+}
+
+/* Reorderable configurable quick shortcuts */
+.dashboard-action-settings { border-radius: 17px; }
+.dashboard-action-settings .section-title h2 { margin: 0 0 4px; }
+.dashboard-action-settings .section-title p { margin: 0; color: #68758a; font-size: 12px; line-height: 1.55; }
+.dashboard-action-settings-grid { display: grid; gap: 9px; }
+.dashboard-action-row { min-width: 0; padding: 12px; border: 1px solid #e0e6ef; border-radius: 14px; background: #fbfcff; }
+.dashboard-action-row-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.dashboard-action-enable { display: inline-flex; align-items: center; gap: 7px; color: #344054; font-size: 12px; font-weight: 800; }
+.dashboard-action-enable input { width: 18px; height: 18px; accent-color: var(--primary); }
+.dashboard-action-order { display: flex; align-items: center; gap: 5px; }
+.quiet-icon-button { display: inline-grid; width: 31px; height: 31px; place-items: center; padding: 0; border: 1px solid #dbe3ef; border-radius: 9px; background: #fff; color: #344054; font-weight: 800; cursor: pointer; }
+.quiet-icon-button:disabled { opacity: .35; cursor: default; }
+.danger-icon-button { color: #b42318; background: #fff8f7; border-color: #f3d0cd; }
+.dashboard-action-row .form-row { gap: 10px; }
+.dashboard-action-row .form-field { gap: 4px; }
+.dashboard-action-row .field-label { font-size: 12px; }
+.dashboard-action-row .form-control { min-height: 42px; padding: 8px 10px; border-radius: 10px; font-size: 13px; }
+.dashboard-action-row-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 11px; }
+.dashboard-action-row-tools small { color: #68758a; font-size: 11px; }
+.dashboard-action-row-tools button:disabled { opacity: .45; }
+.bottom-nav-setting-form { display: grid; gap: 10px; }
+.bottom-nav-setting { max-width: 720px; }
+.bottom-nav-setting .dashboard-action-switch { margin-inline-start: auto; }
+.bottom-nav-setting-form .dialog-actions { margin-top: 0; }
+
+/* Compact consistent form controls and search/filter tooling across catalogue pages */
+.form-control { min-height: 44px; padding: 9px 11px; border: 1px solid #d5deeb; border-radius: 11px; background: #fff; color: #202b3d; font-size: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.025); }
+.form-control:focus { border-color: #7da3f0; outline: 3px solid rgba(26,86,219,.10); box-shadow: none; }
+.search-toolbar { gap: 7px; margin-bottom: 11px; }
+.search-box { min-height: 44px; padding-inline: 10px; border-radius: 11px; }
+.search-box input { min-height: 40px; font-size: 14px; }
+.search-toolbar .form-control { flex: 0 1 185px; min-width: 115px; min-height: 44px; padding: 7px 9px; font-size: 12px; }
+.primary-button, .secondary-button, .quiet-button { min-height: 40px; padding: 8px 12px; border-radius: 10px; font-size: 12px; }
+.entity-actions { gap: 7px; }
+.entity-actions .primary-button, .entity-actions .secondary-button, .entity-actions .quiet-button { min-height: 36px; padding: 6px 10px; }
+.filter-chips { gap: 6px; margin-bottom: 12px; }
+.filter-chip { min-height: 32px; padding: 6px 11px; border-radius: 999px; font-size: 12px; }
+.entity-card { border-radius: 15px; box-shadow: 0 3px 12px rgba(20,32,52,.035); }
+.entity-avatar { border-radius: 12px; }
+@media (max-width: 576px) {
+  .search-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: stretch; }
+  .search-toolbar .search-box { grid-column: 1 / -1; }
+  .search-toolbar .form-control { width: 100%; max-width: none; }
+  .search-toolbar .secondary-button { min-height: 42px; }
+  .entity-actions .primary-button, .entity-actions .secondary-button, .entity-actions .quiet-button { flex: 1 1 auto; }
+  .dashboard-action-row { padding: 10px; }
+  .dashboard-action-row .form-row { grid-template-columns: minmax(0,1fr); }
+}
