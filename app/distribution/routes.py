@@ -283,7 +283,7 @@ def payment(party_type):
         if saved and (party_type == "all" or saved.party.party_type == party_type):
             before = party_balance(saved.party_id) + Decimal(str(saved.amount))
             after = party_balance(saved.party_id)
-            summary = party_period_summary(saved.party_id, saved.business_date, saved.business_date)
+            summary = party_period_summary(saved.party_id, saved.business_date, saved.business_date, period_code=saved.period_code)
             receipt = {
                 "id": saved.id, "party": saved.party, "amount": saved.amount,
                 "business_date": saved.business_date, "statement": saved.statement,
@@ -359,7 +359,10 @@ def payment_summary(party_type, party_id):
     )) if selected_period_id else None
     business_date = selected_period.business_date if selected_period else _parse_date(request.args.get("date"), business_today())
     try:
-        summary = party_period_summary(party.id, business_date, business_date)
+        summary = party_period_summary(
+            party.id, business_date, business_date,
+            period_code=selected_period.period_code if selected_period else None,
+        )
     except BusinessRuleError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
     current_balance = party_balance(party.id)
