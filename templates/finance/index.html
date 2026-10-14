@@ -23,7 +23,7 @@
    {% if not row.account.is_main %}
    <form method="post" action="{{ url_for('finance.delete_account',account_id=row.account.id) }}" data-confirm="{% if row.account.is_active %}هل تريد حذف هذا الحساب؟ إذا كان مرتبطًا بحركات مالية فسيتم إيقافه فقط للاحتفاظ بالسجلات.{% else %}هل تريد حذف هذا الحساب نهائيًا إذا لم يرتبط بحركات مالية؟{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="quiet-button" type="submit">{% if row.account.is_active %}حذف / إيقاف{% else %}حذف نهائي{% endif %}</button>
+    <button class="quiet-button" type="submit">حذف / إيقاف</button>
    </form>
    {% endif %}
   </div>
