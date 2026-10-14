@@ -13,6 +13,7 @@ from app.models.production import BusinessPeriod, DoughBatch
 from app.models.product import Product
 from app.models.role import Permission, Role
 from app.models.user import User
+from app.reports.routes import _safe_csv_cell
 
 
 def setup():
@@ -103,6 +104,7 @@ def test_report_center_aggregates_daily_business_data():
         login(client)
         response = client.get("/reports/")
         assert response.status_code == 200
+        assert response.headers.get("Cache-Control") == "private, no-store"
         page = response.get_data(as_text=True)
         assert "مركز التقارير" in page
         assert "200.00" in page
@@ -116,6 +118,10 @@ def test_report_center_aggregates_daily_business_data():
         assert "text/csv" in export_response.content_type
         assert export_response.data.startswith(bytes((239, 187, 191)))
         assert "القيمة".encode("utf-8") in export_response.data
+        assert export_response.headers.get("Cache-Control") == "private, no-store"
+        assert _safe_csv_cell("=1+1") == "'=1+1"
+        assert _safe_csv_cell("@SUM(A1:A2)") == "'@SUM(A1:A2)"
+        assert _safe_csv_cell("موزع طبيعي") == "موزع طبيعي"
     finally:
         cleanup(app)
 
