@@ -703,11 +703,54 @@ def period_detail(period_id):
     for party_id, item in parties.items():
         entries = db.session.scalars(select(PartyLedgerEntry).where(
             PartyLedgerEntry.party_id == party_id,
+            PartyLedgerEntry.business_date <= period.business_date,
         )).all()
-        item["remaining_due"] = sum(
-            (Decimal(str(entry.debit_amount or 0)) - Decimal(str(entry.credit_amount or 0)) for entry in entries),
+        all_entries = db.session.scalars(select(PartyLedgerEntry).where(
+            PartyLedgerEntry.party_id == party_id,
+        )).all()
+        item["current_balance"] = sum(
+            (Decimal(str(entry.debit_amount or 0)) - Decimal(str(entry.credit_amount or 0)) for entry in all_entries),
             Decimal("0.00"),
         )
+
+        issue_ids = [entry.source_id for entry in entries if entry.source_type == "distribution_issue"]
+        payment_ids = [entry.source_id for entry in entries if entry.source_type == "party_payment"]
+        issue_sources = {
+            row.id: row for row in (
+                db.session.scalars(select(DistributionIssue).where(DistributionIssue.id.in_(issue_ids))).all()
+                if issue_ids else []
+            )
+        }
+        payment_sources = {
+            row.id: row for row in (
+                db.session.scalars(select(PartyPayment).where(PartyPayment.id.in_(payment_ids))).all()
+                if payment_ids else []
+            )
+        }
+        if period.period_code == "morning":
+            accepted_codes = {"morning"}
+        elif period.period_code == "evening":
+            accepted_codes = {"morning", "evening"}
+        else:
+            accepted_codes = {"daily"}
+
+        period_balance = Decimal("0.00")
+        for entry in entries:
+            include = entry.business_date < period.business_date
+            if entry.business_date == period.business_date:
+                if entry.source_type == "distribution_issue":
+                    source = issue_sources.get(entry.source_id)
+                    include = source is not None and source.period_code in accepted_codes
+                elif entry.source_type == "party_payment":
+                    source = payment_sources.get(entry.source_id)
+                    include = source is not None and source.period_code in accepted_codes
+                elif period.closed_at and entry.created_at:
+                    include = entry.created_at <= period.closed_at
+                else:
+                    include = True
+            if include:
+                period_balance += Decimal(str(entry.debit_amount or 0)) - Decimal(str(entry.credit_amount or 0))
+        item["remaining_due"] = period_balance
 
     return render_template(
         "operations/period_detail.html",
