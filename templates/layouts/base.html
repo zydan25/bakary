@@ -194,24 +194,6 @@
         </section>
         {% endif %}
 
-        <section class="tree-section" data-nav-section="access">
-          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
-            <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
-            <span class="tree-chevron" aria-hidden="true">‹</span>
-          </button>
-          <div class="tree-children" hidden>
-            {% if current_user.has_permission('users.manage') %}
-            <span class="tree-link pending-link" aria-disabled="true">
-              <span class="child-symbol">♧</span><span>الموظفون والصلاحيات</span><small>لاحقًا</small>
-            </span>
-            {% endif %}
-            {% if current_user.has_permission('settings.manage') %}
-            <span class="tree-link pending-link" aria-disabled="true">
-              <span class="child-symbol">⚙</span><span>إعدادات النظام</span><small>لاحقًا</small>
-            </span>
-            {% endif %}
-          </div>
-        </section>
       </nav>
 
       <div class="sidebar-footer">
@@ -237,7 +219,6 @@
         </div>
         {% if current_user.is_authenticated %}
         <div class="topbar-actions">
-          <a class="icon-button profile-trigger" href="{{ url_for('auth.account') }}" aria-label="حسابي">◉</a>
           <form method="post" action="{{ url_for('auth.logout') }}" data-confirm="هل تريد تسجيل الخروج؟">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="icon-button logout-trigger" aria-label="تسجيل الخروج">↪</button>
