@@ -1,0 +1,60 @@
+{% extends "layouts/base.html" %}
+{% block title %}تقرير صرف {{ meta.plural }}{% endblock %}
+{% block page_heading %}تقرير الصرف اليومي{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div><p class="eyebrow">التقارير</p><h1>تقرير صرف {{ meta.plural }}</h1><p class="heading-subtitle">عرض العمليات المسجلة لليوم أو الحساب المحدد، من الأحدث إلى الأقدم.</p></div>
+  <button type="button" class="secondary-button" onclick="window.print()">طباعة التقرير</button>
+</section>
+
+<form class="content-card report-filter-form" method="get">
+  <div class="form-row">
+    <div class="form-field"><label class="field-label" for="report-date">التاريخ</label><input class="form-control" id="report-date" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
+    <div class="form-field">
+      <label class="field-label" for="report-party">الحساب</label>
+      <select class="form-control" id="report-party" name="party_id" data-searchable="true">
+        <option value="0">جميع الحسابات</option>
+        {% for party in parties %}<option value="{{ party.id }}" {% if selected_party_id == party.id %}selected{% endif %}>{{ party.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <label class="check-row"><input type="checkbox" name="summary_only" value="1" {% if summary_only %}checked{% endif %}> إجماليات فقط</label>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit">عرض التقرير</button></div>
+</form>
+
+<section class="content-card report-totals-card">
+  <div class="section-title"><div><h2>إجماليات التقرير</h2><p>{{ selected_date.strftime('%Y-%m-%d') }}</p></div></div>
+  <div class="report-totals-grid">
+    <div><small>إجمالي الكمية</small><strong>{{ totals.quantity|int }} حبة</strong></div>
+    <div><small>إجمالي القيمة</small><strong>{{ "{:,.2f}".format(totals.amount) }} ريال</strong></div>
+    <div><small>عدد العمليات</small><strong>{{ rows|length }}</strong></div>
+  </div>
+</section>
+
+{% if summary_only %}
+<section class="entity-list" aria-label="إجماليات حسب الحساب">
+  {% for row in summary_rows %}
+  <article class="entity-card">
+    <div class="entity-top"><div class="entity-avatar">♙</div><div class="entity-main"><h2>{{ row.party.name }}</h2><p>{{ row.count }} عملية صرف</p></div></div>
+    <div class="report-totals-grid compact"><div><small>الكمية</small><strong>{{ row.quantity|int }} حبة</strong></div><div><small>القيمة</small><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div></div>
+    <a class="secondary-button" href="{{ url_for('distribution.party_statement', party_type=party_type, party_id=row.party.id, start=selected_date.isoformat(), end=selected_date.isoformat()) }}">كشف الحساب</a>
+  </article>
+  {% else %}<div class="empty-state"><h2>لا توجد عمليات صرف</h2><p>لا توجد عمليات مطابقة للتاريخ والحساب المحددين.</p></div>{% endfor %}
+</section>
+{% else %}
+<section class="entity-list" aria-label="عمليات الصرف">
+  {% for row in rows %}
+  <article class="entity-card">
+    <div class="entity-top"><div class="entity-avatar">↗</div><div class="entity-main"><h2>{{ row.party.name }}</h2><p>{{ row.created_at.strftime('%Y-%m-%d %H:%M') if row.created_at else row.business_date.isoformat() }}</p></div><span class="status-badge status-primary">{{ row.product.name }}</span></div>
+    <div class="report-totals-grid compact">
+      <div><small>الكمية</small><strong>{{ row.quantity }} {{ row.product.unit_label }}</strong></div>
+      <div><small>سعر الوحدة</small><strong>{{ "{:,.2f}".format(row.unit_price) }} ريال</strong></div>
+      <div><small>الإجمالي</small><strong>{{ "{:,.2f}".format(row.total_amount) }} ريال</strong></div>
+    </div>
+    {% if row.statement %}<p class="heading-subtitle">{{ row.statement }}</p>{% endif %}
+    <a class="secondary-button" href="{{ url_for('distribution.party_statement', party_type=party_type, party_id=row.party.id, start=selected_date.isoformat(), end=selected_date.isoformat()) }}">كشف الحساب</a>
+  </article>
+  {% else %}<div class="empty-state"><h2>لا توجد عمليات صرف</h2><p>لا توجد عمليات مطابقة للتاريخ والحساب المحددين.</p></div>{% endfor %}
+</section>
+{% endif %}
+{% endblock %}
