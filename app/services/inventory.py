@@ -1,6 +1,7 @@
 """Append-only raw-material inventory services."""
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from uuid import uuid4
 
 from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
@@ -58,7 +59,7 @@ def create_inventory_item(*, name, code, unit_label="كجم", reorder_level=0, a
     if not name:
         raise InventoryRuleError("اسم المادة مطلوب.")
     if not code:
-        raise InventoryRuleError("رمز المادة مطلوب.")
+        code = f"MAT-{uuid4().hex[:12].upper()}"
     if not unit_label:
         raise InventoryRuleError("وحدة القياس مطلوبة.")
 
