@@ -66,3 +66,50 @@ def test_protected_dashboard_redirects_to_sign_in():
     response = client.get("/dashboard/")
     assert response.status_code == 302
     assert "/auth/login" in response.headers["Location"]
+
+
+
+def test_manager_can_update_profile_and_password_from_account_dialogs():
+    app = make_app_with_admin()
+    try:
+        client = app.test_client()
+        client.post(
+            "/auth/login",
+            data={"phone": "+967771234567", "password": "Strong-pass-123"},
+            follow_redirects=True,
+        )
+
+        page = client.get("/auth/account")
+        html = page.get_data(as_text=True)
+        assert page.status_code == 200
+        assert "profile-edit-dialog" in html
+        assert "password-edit-dialog" in html
+        assert 'data-auto-open="false"' in html
+        assert "مدير الاختبار" in html
+
+        updated = client.post("/auth/account", data={
+            "action": "profile",
+            "full_name": "المدير المحدث",
+            "phone": "+967771234568",
+            "current_password": "Strong-pass-123",
+        }, follow_redirects=True)
+        assert updated.status_code == 200
+        assert "تم تحديث بيانات الحساب بنجاح" in updated.get_data(as_text=True)
+        with app.app_context():
+            user = db.session.query(User).filter_by(phone="+967771234568").one()
+            assert user.full_name == "المدير المحدث"
+
+        password_update = client.post("/auth/account", data={
+            "action": "password",
+            "current_password": "Strong-pass-123",
+            "new_password": "New-strong-pass-456",
+            "confirm_password": "New-strong-pass-456",
+        }, follow_redirects=True)
+        assert password_update.status_code == 200
+        assert "تم تحديث كلمة المرور بنجاح" in password_update.get_data(as_text=True)
+        with app.app_context():
+            user = db.session.query(User).filter_by(phone="+967771234568").one()
+            assert user.check_password("New-strong-pass-456")
+            assert not user.check_password("Strong-pass-123")
+    finally:
+        teardown_database(app)
