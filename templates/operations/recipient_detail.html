@@ -26,9 +26,11 @@
 </section>
 <section class="content-card product-danger-zone">
  <div><strong>حذف المستفيد</strong><p>إذا كان للمستفيد سجل صرف سابق، يمنع الحذف النهائي حتى لا تضيع سجلات التوزيع، ويمكن إيقافه بدلًا من ذلك.</p></div>
- <form method="post" action="{{ url_for('operations.delete_free_recipient',recipient_id=recipient.id) }}" data-confirm="هل تريد حذف هذا المستفيد نهائيًا؟">
+ {% if can_delete_recipient %}
+ <form method="post" action="{{ url_for('operations.delete_free_recipient',recipient_id=recipient.id) }}" data-confirm="سيتم حذف المستفيد وسجلاته في الفترات المفتوحة فقط. هل تريد المتابعة؟">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button class="danger-button" type="submit">حذف نهائي</button>
+  <button class="danger-button" type="submit">حذف المستفيد</button>
  </form>
+ {% else %}<small class="subtle-hint">لديه عمليات في فترات مختتمة؛ الحذف غير متاح للحفاظ على سجل التوزيع.</small>{% endif %}
 </section>
 {% endblock %}
