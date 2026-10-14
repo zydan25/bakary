@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a56db">
   <meta name="application-name" content="Bakary">
-  <meta name="description" content="نظام إدارة المخبز">
+  <meta name="description" content="{{ bakery_business_name }}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -23,7 +23,7 @@
       <div class="sidebar-brand">
         <img src="{{ url_for('static', filename='icons/bakary.svg') }}" alt="" width="42" height="42">
         <div class="sidebar-brand-copy">
-          <strong>نظام إدارة المخبز</strong>
+          <strong>{{ bakery_business_name }}</strong>
           <span>BAKARY</span>
         </div>
         <button type="button" class="icon-button sidebar-close" data-close-drawer aria-label="إغلاق القائمة">×</button>
@@ -172,6 +172,12 @@
           </div>
         </section>
         {% endif %}
+        {% if current_user.has_permission('settings.manage') %}
+        <section class="tree-section" data-nav-section="settings">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">⚙</span><span class="tree-heading-title">إعدادات النظام</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
+          <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('settings.index') }}"><span class="child-symbol">⚙</span><span>إعدادات المخبز</span></a></div>
+        </section>
+        {% endif %}
         {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
         <section class="tree-section" data-nav-section="staff">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♙</span><span class="tree-heading-title">الموظفون والصلاحيات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
@@ -216,7 +222,7 @@
         {% else %}
         <a class="brand-inline" href="{{ url_for('home') }}">
           <img src="{{ url_for('static', filename='icons/bakary.svg') }}" alt="" width="38" height="38">
-          <strong>نظام إدارة المخبز</strong>
+          <strong>{{ bakery_business_name }}</strong>
         </a>
         {% endif %}
         <div class="topbar-title">
