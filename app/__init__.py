@@ -1,9 +1,11 @@
 """Flask application factory."""
 
+import json
 import os
 from pathlib import Path
+import re
 
-from flask import Flask, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 
@@ -83,6 +85,96 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(reports_bp)
     register_cli(app)
 
+    @app.get("/manifest.webmanifest", endpoint="pwa_manifest")
+    def pwa_manifest():
+        def setting_value(key, default=None):
+            try:
+                row = db.session.query(models.Setting).filter_by(key=key).first()
+                return row.value if row is not None and row.value is not None else default
+            except Exception:
+                return default
+
+        business_name = setting_value("business_name", "نظام إدارة المخبز")
+        if not isinstance(business_name, str) or not business_name.strip():
+            business_name = "نظام إدارة المخبز"
+        app_name = setting_value("pwa_app_name", business_name)
+        if not isinstance(app_name, str) or not app_name.strip():
+            app_name = business_name
+        short_name = setting_value("pwa_app_short_name", app_name[:12].strip() or app_name[:12])
+        if not isinstance(short_name, str) or not short_name.strip():
+            short_name = app_name[:12].strip() or app_name[:12]
+
+        icon_token = setting_value("pwa_app_icon")
+        if not isinstance(icon_token, str) or not re.fullmatch(r"[0-9a-f]{32}", icon_token):
+            icons = [{
+                "src": url_for("static", filename="icons/bakary.svg"),
+                "sizes": "any",
+                "type": "image/svg+xml",
+                "purpose": "any maskable",
+            }]
+        else:
+            icons = [
+                {
+                    "src": url_for("app_icon", token=icon_token, size=192),
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any",
+                },
+                {
+                    "src": url_for("app_icon", token=icon_token, size=512),
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any",
+                },
+            ]
+
+        manifest = {
+            "id": "/",
+            "name": app_name,
+            "short_name": short_name,
+            "description": "إدارة الموزعين والعملاء والإنتاج والمخزون والحسابات",
+            "lang": "ar",
+            "dir": "rtl",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "orientation": "portrait-primary",
+            "background_color": "#f6f8fb",
+            "theme_color": "#1a56db",
+            "icons": icons,
+        }
+        response = app.response_class(
+            json.dumps(manifest, ensure_ascii=False),
+            status=200,
+            mimetype="application/manifest+json",
+        )
+        response.headers["Cache-Control"] = "no-store, no-cache, max-age=0, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        return response
+
+    @app.get("/app-icon/<token>/<int:size>.png", endpoint="app_icon")
+    def app_icon(token, size):
+        if size not in {192, 512} or not re.fullmatch(r"[0-9a-f]{32}", token):
+            abort(404)
+        try:
+            row = db.session.query(models.Setting).filter_by(key="pwa_app_icon").first()
+        except Exception:
+            row = None
+        if row is None or row.value != token:
+            abort(404)
+        icon_dir = Path(app.instance_path) / "app_icons"
+        filename = f"app-icon-{token}-{size}.png"
+        if not (icon_dir / filename).is_file():
+            abort(404)
+        response = send_from_directory(
+            str(icon_dir),
+            filename,
+            mimetype="image/png",
+            max_age=31536000,
+        )
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
     @app.context_processor
     def inject_bakery_business_name():
         try:
@@ -98,7 +190,33 @@ def create_app(config_name=None, test_config=None):
         except Exception:
             bottom_setting = None
         show_bottom_nav = bottom_setting.value is not False if bottom_setting is not None else True
-        return {"bakery_business_name": name, "show_bottom_nav": show_bottom_nav}
+        try:
+            pwa_name_setting = db.session.query(models.Setting).filter_by(key="pwa_app_name").first()
+            pwa_app_name = pwa_name_setting.value if pwa_name_setting is not None else None
+        except Exception:
+            pwa_app_name = None
+        if not isinstance(pwa_app_name, str) or not pwa_app_name.strip():
+            pwa_app_name = name
+
+        try:
+            icon_setting = db.session.query(models.Setting).filter_by(key="pwa_app_icon").first()
+            icon_token = icon_setting.value if icon_setting is not None else None
+        except Exception:
+            icon_token = None
+        if isinstance(icon_token, str) and re.fullmatch(r"[0-9a-f]{32}", icon_token):
+            pwa_app_icon_url = url_for("app_icon", token=icon_token, size=512)
+            pwa_app_icon_custom = True
+        else:
+            pwa_app_icon_url = url_for("static", filename="icons/bakary.svg")
+            pwa_app_icon_custom = False
+
+        return {
+            "bakery_business_name": name,
+            "show_bottom_nav": show_bottom_nav,
+            "pwa_app_name": pwa_app_name,
+            "pwa_app_icon_url": pwa_app_icon_url,
+            "pwa_app_icon_custom": pwa_app_icon_custom,
+        }
 
     @app.before_request
     def require_first_password_change():
@@ -109,6 +227,8 @@ def create_app(config_name=None, test_config=None):
             "auth.logout",
             "static",
             "service_worker",
+            "pwa_manifest",
+            "app_icon",
             "health.health",
         }
         if request.endpoint not in allowed_endpoints:
