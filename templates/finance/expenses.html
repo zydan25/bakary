@@ -1,0 +1,31 @@
+{% extends "layouts/base.html" %}
+{% block title %}المصروفات{% endblock %}
+{% block page_heading %}المصروفات{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">المالية</p><h1>المصروفات</h1><p class="heading-subtitle">يسجل كل مصروف مع حركة صادرة من الحساب المختار، ويُرفض إذا لم يكف الرصيد.</p></div>
+ {% if can_manage %}<a class="primary-button" href="{{ url_for('finance.expenses',action='new') }}">＋ تسجيل مصروف</a>{% endif %}
+</section>
+<section class="entity-list">
+ {% for row in rows %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">−</div><div class="entity-main"><h2>{{ row.title }}</h2><p>{{ row.business_date.isoformat() }} · {{ account_map.get(row.cash_account_id,'حساب') }}</p></div><span class="status-badge status-muted">مصروف</span></div>
+  <div class="stock-balance-panel"><small>المبلغ</small><strong class="summary-red">{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>
+  {% if row.statement %}<p class="heading-subtitle">{{ row.statement }}</p>{% endif %}
+ </article>
+ {% else %}<div class="empty-state"><h2>لا توجد مصروفات مسجلة</h2><p>استخدم زر «تسجيل مصروف» لإضافة أول عملية.</p></div>{% endfor %}
+</section>
+
+<dialog class="form-dialog" id="expense-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}">
+ <div class="dialog-header"><div><p class="eyebrow">صرف نقدي</p><h2>تسجيل مصروف</h2></div><a class="dialog-close" href="{{ url_for('finance.expenses') }}" aria-label="إغلاق">×</a></div>
+ <form method="post" class="form-stack">
+  {{ form.hidden_tag() }}
+  <div class="form-field">{{ form.title.label(class_="field-label") }}{{ form.title(class_="form-control",placeholder="اسم المصروف") }}{% for error in form.title.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.amount.label(class_="field-label") }}{{ form.amount(class_="form-control",inputmode="decimal",placeholder="0.00",**{'data-amount-words':'true','data-currency':'ريال'}) }}{% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.cash_account_id.label(class_="field-label") }}{{ form.cash_account_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in form.cash_account_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.business_date.label(class_="field-label") }}{{ form.business_date(class_="form-control",type="date") }}{% for error in form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ form.statement.label(class_="field-label") }}{{ form.statement(class_="form-control",rows="2",placeholder="تفاصيل إضافية") }}</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ تسجيل المصروف...">حفظ المصروف</button><a class="secondary-button" href="{{ url_for('finance.expenses') }}">إلغاء</a></div>
+ </form>
+</dialog>
+{% endblock %}
