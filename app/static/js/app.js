@@ -105,4 +105,221 @@
       });
     });
   }
+
+  // Modal forms open only after an explicit add/edit action.
+  document.querySelectorAll("dialog[data-auto-open='true']").forEach((dialog) => {
+    try { if (!dialog.open) dialog.showModal(); } catch (_) {}
+  });
+  document.querySelectorAll("dialog.form-dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.querySelectorAll("[data-close-dialog]").forEach((button) => {
+      button.addEventListener("click", () => dialog.close());
+    });
+  });
+
+  // Instant Arabic amount and quantity wording. The server still validates monetary values.
+  const digitMap = { "٠":"0", "١":"1", "٢":"2", "٣":"3", "٤":"4", "٥":"5", "٦":"6", "٧":"7", "٨":"8", "٩":"9",
+    "۰":"0", "۱":"1", "۲":"2", "۳":"3", "۴":"4", "۵":"5", "۶":"6", "۷":"7", "۸":"8", "۹":"9" };
+  function numericText(value) {
+    return String(value || "").replace(/[٠-٩۰-۹]/g, (digit) => digitMap[digit])
+      .replace(/٬/g, "").replace(/٫/g, ".").replace(/,/g, "").trim();
+  }
+  const ones = ["صفر","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة"];
+  const teens = ["عشرة","أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر"];
+  const tens = ["","","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون"];
+  const hundreds = ["","مائة","مائتان","ثلاثمائة","أربعمائة","خمسمائة","ستمائة","سبعمائة","ثمانمائة","تسعمائة"];
+  function underThousand(number) {
+    number = Math.floor(number);
+    const parts = [];
+    const h = Math.floor(number / 100);
+    const r = number % 100;
+    if (h) parts.push(hundreds[h]);
+    if (r >= 1 && r <= 9) parts.push(ones[r]);
+    else if (r >= 10 && r <= 19) parts.push(teens[r - 10]);
+    else if (r >= 20) {
+      const u = r % 10;
+      if (u) parts.push(ones[u]);
+      parts.push(tens[Math.floor(r / 10)]);
+    }
+    return parts.join(" و ");
+  }
+  function integerWords(value) {
+    let number = Math.abs(Math.floor(value));
+    if (!number) return "صفر";
+    const scales = [
+      [1000000000, "مليار", "ملياران", "مليارات"],
+      [1000000, "مليون", "مليونان", "ملايين"],
+      [1000, "ألف", "ألفان", "آلاف"]
+    ];
+    const parts = [];
+    for (const [scale, singular, dual, plural] of scales) {
+      const group = Math.floor(number / scale);
+      number %= scale;
+      if (!group) continue;
+      if (group === 1) parts.push(singular);
+      else if (group === 2) parts.push(dual);
+      else if (group >= 3 && group <= 10) parts.push(underThousand(group) + " " + plural);
+      else parts.push(underThousand(group) + " " + singular);
+    }
+    if (number) parts.push(underThousand(number));
+    return parts.join(" و ");
+  }
+  function amountWords(raw, currency) {
+    const text = numericText(raw);
+    if (!text || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(text)) return "";
+    const number = Number(text);
+    if (!Number.isFinite(number) || Math.abs(number) > 999999999999.99) return "";
+    const cents = Math.round(Math.abs(number) * 100);
+    const whole = Math.floor(cents / 100);
+    const fraction = cents % 100;
+    let phrase = integerWords(whole) + " " + (currency || "ريال");
+    if (fraction) phrase += " و " + integerWords(fraction) + " فلس";
+    return number < 0 ? "سالب " + phrase : phrase;
+  }
+  function quantityWords(raw, unit) {
+    const text = numericText(raw);
+    if (!text || !/^[+]?(?:\d+\.?\d*|\.\d+)$/.test(text)) return "";
+    const number = Number(text);
+    if (!Number.isFinite(number) || number < 0 || number > 999999999999) return "";
+    const whole = Math.floor(number);
+    const fraction = Number((number - whole).toFixed(3));
+    let phrase = integerWords(whole) + " " + (unit || "حبة");
+    if (fraction) {
+      const digits = String(fraction).split(".")[1] || "";
+      phrase += " و " + integerWords(Number(digits)) + " من " +
+        (digits.length === 1 ? "عشرة" : digits.length === 2 ? "مائة" : "ألف") + " " + (unit || "حبة");
+    }
+    return phrase;
+  }
+  document.querySelectorAll("[data-amount-words='true'], [data-quantity-words='true']").forEach((input) => {
+    const parent = input.parentElement;
+    if (!parent) return;
+    let output = [...parent.children].find((child) => child.matches("[data-words-output]"));
+    if (!output) {
+      output = document.createElement("small");
+      output.dataset.wordsOutput = "true";
+      output.className = "amount-words";
+      output.setAttribute("aria-live", "polite");
+      input.insertAdjacentElement("afterend", output);
+    }
+    const refresh = () => {
+      const phrase = input.dataset.quantityWords === "true"
+        ? quantityWords(input.value, input.dataset.unit || "حبة")
+        : amountWords(input.value, input.dataset.currency || "ريال");
+      output.textContent = phrase;
+      output.hidden = !phrase;
+    };
+    input.addEventListener("input", refresh);
+    input.addEventListener("change", refresh);
+    refresh();
+  });
+
+  // Live card filtering with no full-page reload while typing.
+  document.querySelectorAll("form[data-live-filter-target]").forEach((form) => {
+    const search = form.querySelector("[name='q']");
+    const target = document.querySelector(form.dataset.liveFilterTarget);
+    if (search && target) {
+      search.addEventListener("input", () => {
+        const needle = search.value.trim().toLocaleLowerCase();
+        target.querySelectorAll("[data-searchable-card]").forEach((card) => {
+          const text = (card.dataset.searchText || card.textContent || "").toLocaleLowerCase();
+          card.hidden = Boolean(needle) && !text.includes(needle);
+        });
+      });
+    }
+    form.querySelectorAll("select[data-live-submit]").forEach((select) => {
+      select.addEventListener("change", () => form.requestSubmit());
+    });
+  });
+
+  // White searchable dropdown for selects explicitly marked by templates.
+  document.querySelectorAll("select[data-searchable='true']").forEach((select) => {
+    if (select.dataset.searchEnhanced === "true") return;
+    select.dataset.searchEnhanced = "true";
+    const parent = select.parentElement;
+    if (!parent) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = "smart-select";
+    parent.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.classList.add("smart-select-native");
+    select.setAttribute("aria-hidden", "true");
+    select.tabIndex = -1;
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "smart-select-trigger";
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-haspopup", "listbox");
+    const menu = document.createElement("div");
+    menu.className = "smart-select-menu";
+    menu.hidden = true;
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "smart-select-search";
+    search.placeholder = "بحث فوري...";
+    search.setAttribute("aria-label", "بحث في الخيارات");
+    const options = document.createElement("div");
+    options.className = "smart-select-options";
+    options.setAttribute("role", "listbox");
+    menu.append(search, options);
+    wrapper.append(trigger, menu);
+
+    function syncValue() {
+      const selected = select.options[select.selectedIndex];
+      trigger.textContent = selected ? selected.textContent.trim() : "اختر...";
+      options.querySelectorAll("button").forEach((button) => {
+        button.classList.toggle("is-selected", button.dataset.value === select.value);
+        button.setAttribute("aria-selected", String(button.dataset.value === select.value));
+      });
+    }
+    function closeMenu() {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      wrapper.classList.remove("is-open");
+    }
+    function openMenu() {
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      wrapper.classList.add("is-open");
+      search.value = "";
+      options.querySelectorAll("button").forEach((button) => { button.hidden = false; });
+      search.focus();
+    }
+    [...select.options].forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "smart-select-option";
+      button.textContent = option.textContent.trim();
+      button.dataset.value = option.value;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", String(option.selected));
+      button.disabled = option.disabled;
+      button.addEventListener("click", () => {
+        select.value = option.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncValue();
+        closeMenu();
+      });
+      options.appendChild(button);
+    });
+    trigger.addEventListener("click", () => menu.hidden ? openMenu() : closeMenu());
+    trigger.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") { event.preventDefault(); openMenu(); }
+    });
+    search.addEventListener("input", () => {
+      const needle = search.value.trim().toLocaleLowerCase();
+      options.querySelectorAll("button").forEach((button) => {
+        button.hidden = !button.textContent.toLocaleLowerCase().includes(needle);
+      });
+    });
+    select.addEventListener("change", syncValue);
+    document.addEventListener("click", (event) => {
+      if (!wrapper.contains(event.target)) closeMenu();
+    });
+    syncValue();
+  });
+
 })();
