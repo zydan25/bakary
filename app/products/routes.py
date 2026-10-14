@@ -9,7 +9,7 @@ from app.extensions import db
 from app.models.product import Product
 from app.models.party import Party, PartyPrice
 from app.models.distribution import DistributionIssue
-from app.models.free_distribution import FreeDistribution
+from app.models.free_distribution import FreeDistribution, FreeRecipient
 from app.models.production import DoughBatch
 from app.models.closing import PeriodCloseProduct
 from app.products import products_bp
@@ -219,6 +219,7 @@ def delete(product_id):
     historical_references = [
         ("حركات الصرف", db.session.scalar(select(func.count()).select_from(DistributionIssue).where(DistributionIssue.product_id == product.id)) or 0),
         ("التوزيع المجاني", db.session.scalar(select(func.count()).select_from(FreeDistribution).where(FreeDistribution.product_id == product.id)) or 0),
+        ("الهدف اليومي للمستفيدين", db.session.scalar(select(func.count()).select_from(FreeRecipient).where(FreeRecipient.default_product_id == product.id)) or 0),
         ("سجلات الإنتاج", db.session.scalar(select(func.count()).select_from(DoughBatch).where(DoughBatch.product_id == product.id)) or 0),
         ("إقفالات الفترات", db.session.scalar(select(func.count()).select_from(PeriodCloseProduct).where(PeriodCloseProduct.product_id == product.id)) or 0),
     ]
