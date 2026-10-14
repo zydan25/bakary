@@ -58,6 +58,7 @@ def create_app(config_name=None, test_config=None):
     from app.operations import operations_bp
     from app.finance import finance_bp
     from app.settings import settings_bp
+    from app.reports import reports_bp
     from app.cli import register_cli
 
     @login_manager.user_loader
@@ -79,6 +80,7 @@ def create_app(config_name=None, test_config=None):
     app.register_blueprint(operations_bp)
     app.register_blueprint(finance_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(reports_bp)
     register_cli(app)
 
     @app.context_processor
