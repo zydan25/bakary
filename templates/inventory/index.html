@@ -38,6 +38,9 @@
       <strong class="{% if low %}summary-red{% else %}stock-value{% endif %}">{{ "{:,.3f}".format(balance) }} <small>{{ item.unit_label }}</small></strong>
     </div>
     <div class="entity-extra-line"><span>حد التنبيه</span><strong>{{ "{:,.3f}".format(item.reorder_level) }} {{ item.unit_label }}</strong></div>
+    {% set valuation = valuations.get(item.id) %}
+    <div class="entity-extra-line"><span>تكلفة الوحدة المتوسطة</span><strong>{% if valuation and valuation.average_unit_cost is not none %}{{ "{:,.2f}".format(valuation.average_unit_cost) }} ريال{% else %}غير مكتملة{% endif %}</strong></div>
+    <div class="entity-extra-line"><span>القيمة التقديرية للمخزون</span><strong>{% if valuation and valuation.stock_value is not none %}{{ "{:,.2f}".format(valuation.stock_value) }} ريال{% else %}غير محسوبة لعدم اكتمال التكاليف{% endif %}</strong></div>
     {% if can_manage and item.is_active %}
     <div class="entity-actions"><a class="primary-button" href="{{ url_for('inventory.stock', item_id=item.id, kind='addition') }}">＋ إضافة مخزون</a><a class="secondary-button" href="{{ url_for('inventory.movements', item_id=item.id) }}">حركة المادة</a></div>
     {% elif current_user.has_permission('inventory.view') %}
