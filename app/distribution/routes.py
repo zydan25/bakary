@@ -1,6 +1,7 @@
 """Issue, payment, daily issue reports, and party ledger reports."""
 
 from datetime import date, datetime
+from app.services.clock import business_today
 from decimal import Decimal
 from uuid import uuid4
 
@@ -92,7 +93,7 @@ def issue(party_type):
         default_product = next((p for p in products if p.is_default), products[0] if products else None)
         form.product_id.data = default_product.id if default_product else 0
         form.quantity.data = None
-        form.business_date.data = date.today()
+        form.business_date.data = business_today()
         form.request_key.data = uuid4().hex
     elif not form.request_key.data:
         form.request_key.data = uuid4().hex
@@ -227,7 +228,7 @@ def payment(party_type):
     if request.method == "GET":
         form.party_id.data = requested_party_id if any(p.id == requested_party_id for p in parties) else 0
         form.amount.data = ""
-        form.business_date.data = date.today()
+        form.business_date.data = business_today()
         form.request_key.data = uuid4().hex
     elif not form.request_key.data:
         form.request_key.data = uuid4().hex
@@ -284,7 +285,7 @@ def payment(party_type):
     chosen_party = next((p for p in parties if p.id == form.party_id.data), None)
     payment_summary = None
     if chosen_party:
-        summary_date = form.business_date.data or date.today()
+        summary_date = form.business_date.data or business_today()
         try:
             period_summary = party_period_summary(chosen_party.id, summary_date, summary_date)
             payment_summary = {
@@ -318,7 +319,7 @@ def payment_summary(party_type, party_id):
     )
     if party is None:
         return jsonify({"ok": False, "message": "الحساب غير موجود أو موقوف."}), 404
-    business_date = _parse_date(request.args.get("date"), date.today())
+    business_date = _parse_date(request.args.get("date"), business_today())
     try:
         summary = party_period_summary(party.id, business_date, business_date)
     except BusinessRuleError as exc:
@@ -357,7 +358,7 @@ def _report_rows(party_type, selected_date, party_id=None):
 def issue_report(party_type):
     meta = _valid_party_type(party_type)
     _require("distribution.reports")
-    selected_date = _parse_date(request.args.get("date"), date.today())
+    selected_date = _parse_date(request.args.get("date"), business_today())
     party_id = request.args.get("party_id", type=int)
     summary_only = request.args.get("summary_only") == "1"
     parties = db.session.scalars(
@@ -404,7 +405,7 @@ def party_statement(party_type, party_id):
     )
     if party is None:
         abort(404)
-    today = date.today()
+    today = business_today()
     start_date = _parse_date(request.args.get("start"), today)
     end_date = _parse_date(request.args.get("end"), today)
     if start_date > end_date:
