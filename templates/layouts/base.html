@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a56db">
+  <meta name="application-name" content="Bakary">
+  <meta name="description" content="نظام إدارة المخبز">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>{% block title %}نظام إدارة المخبز{% endblock %} | Bakary</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/bakary.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="app-frame">
+    {% if current_user.is_authenticated %}
+    <button type="button" class="drawer-backdrop" data-close-drawer aria-label="إغلاق القائمة"></button>
+    <aside class="sidebar" id="main-sidebar" aria-label="التنقل الرئيسي">
+      <div class="sidebar-brand">
+        <img src="{{ url_for('static', filename='icons/bakary.svg') }}" alt="" width="42" height="42">
+        <div class="sidebar-brand-copy">
+          <strong>نظام إدارة المخبز</strong>
+          <span>BAKARY</span>
+        </div>
+        <button type="button" class="icon-button sidebar-close" data-close-drawer aria-label="إغلاق القائمة">×</button>
+      </div>
+
+      <div class="sidebar-user">
+        <span class="avatar-mark">{{ current_user.full_name[:1] }}</span>
+        <span class="sidebar-user-copy">
+          <strong>{{ current_user.full_name }}</strong>
+          <small>{{ current_user.roles | map(attribute='name') | join('، ') or 'مستخدم' }}</small>
+        </span>
+      </div>
+
+      <nav class="tree-nav">
+        <section class="tree-section" data-nav-section="home">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="true">
+            <span class="nav-symbol">⌂</span><span class="tree-heading-title">الرئيسية</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children">
+            <a class="tree-link" data-nav-link href="{{ url_for('dashboard.index') }}">
+              <span class="child-symbol">▦</span><span>لوحة التحكم</span>
+            </a>
+            <a class="tree-link" data-nav-link href="{{ url_for('auth.account') }}">
+              <span class="child-symbol">◉</span><span>حسابي</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="tree-section" data-nav-section="access">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
+            <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
+            <span class="tree-chevron" aria-hidden="true">‹</span>
+          </button>
+          <div class="tree-children" hidden>
+            {% if current_user.has_permission('users.manage') %}
+            <span class="tree-link pending-link" aria-disabled="true">
+              <span class="child-symbol">♧</span><span>الموظفون والصلاحيات</span><small>لاحقًا</small>
+            </span>
+            {% endif %}
+            {% if current_user.has_permission('settings.manage') %}
+            <span class="tree-link pending-link" aria-disabled="true">
+              <span class="child-symbol">⚙</span><span>إعدادات النظام</span><small>لاحقًا</small>
+            </span>
+            {% endif %}
+          </div>
+        </section>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span>برمجة وتصميم م. زيدان العطاب</span>
+        <small>774952665 · يمن كود للتقنيات الذكية</small>
+      </div>
+    </aside>
+    {% endif %}
+
+    <div class="app-main {% if current_user.is_authenticated %}with-sidebar{% endif %}">
+      <header class="app-topbar">
+        {% if current_user.is_authenticated %}
+        <button type="button" class="icon-button menu-trigger" data-open-drawer aria-controls="main-sidebar" aria-label="فتح القائمة">☰</button>
+        {% else %}
+        <a class="brand-inline" href="{{ url_for('home') }}">
+          <img src="{{ url_for('static', filename='icons/bakary.svg') }}" alt="" width="38" height="38">
+          <strong>نظام إدارة المخبز</strong>
+        </a>
+        {% endif %}
+        <div class="topbar-title">
+          <strong>{% block page_heading %}نظام إدارة المخبز{% endblock %}</strong>
+          {% if current_user.is_authenticated %}<small>{{ current_user.full_name }}</small>{% endif %}
+        </div>
+        {% if current_user.is_authenticated %}
+        <div class="topbar-actions">
+          <a class="icon-button profile-trigger" href="{{ url_for('auth.account') }}" aria-label="حسابي">◉</a>
+          <form method="post" action="{{ url_for('auth.logout') }}" data-confirm="هل تريد تسجيل الخروج؟">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="icon-button logout-trigger" aria-label="تسجيل الخروج">↪</button>
+          </form>
+        </div>
+        {% endif %}
+      </header>
+
+      <main class="page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+          <div class="flash-stack" aria-live="polite">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+
+      {% if current_user.is_authenticated %}
+      <nav class="bottom-nav" aria-label="التنقل السريع">
+        <a data-bottom-link href="{{ url_for('dashboard.index') }}"><span>⌂</span><small>الرئيسية</small></a>
+        <button type="button" data-open-drawer><span>☷</span><small>القائمة</small></button>
+        <a data-bottom-link href="{{ url_for('auth.account') }}"><span>◉</span><small>حسابي</small></a>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
