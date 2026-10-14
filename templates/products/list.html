@@ -23,7 +23,7 @@
   <article class="entity-card" data-searchable-card data-search-text="{{ item.name }} {{ item.code }}">
     <div class="entity-top">
       <div class="entity-avatar product-avatar">♨</div>
-      <div class="entity-main"><h2>{{ item.name }}</h2><p>الرمز: <b>{{ item.code }}</b> · الوحدة: {{ item.unit_label }}</p></div>
+      <div class="entity-main"><h2><a class="entity-title-link" href="{{ url_for('products.detail', product_id=item.id) }}">{{ item.name }}</a></h2><p>الرمز: <b>{{ item.code }}</b> · الوحدة: {{ item.unit_label }}</p></div>
       {% if item.is_default %}<span class="status-badge status-primary">افتراضي</span>{% endif %}
       {% if not item.is_active %}<span class="status-badge status-muted">موقوف</span>{% endif %}
     </div>
@@ -34,7 +34,8 @@
     </div>
     {% if can_manage %}
     <div class="entity-actions">
-      <a class="secondary-button" href="{{ url_for('products.index', edit=item.id, status=status, q=query or None) }}">تعديل الأسعار</a>
+      <a class="secondary-button" href="{{ url_for('products.detail', product_id=item.id) }}">التفاصيل والتقرير</a>
+      <a class="secondary-button" href="{{ url_for('products.edit', product_id=item.id) }}">تعديل الصنف والأسعار</a>
       <form method="post" action="{{ url_for('products.toggle', product_id=item.id) }}" data-confirm="{% if item.is_active %}هل تريد إيقاف هذا الصنف؟{% else %}هل تريد تفعيل هذا الصنف؟{% endif %}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="quiet-button" type="submit">{% if item.is_active %}إيقاف{% else %}تفعيل{% endif %}</button>
