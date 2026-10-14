@@ -1,6 +1,7 @@
 """Inventory catalog and stock movement forms."""
 
 from datetime import date
+from app.services.clock import business_today
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
@@ -63,7 +64,7 @@ class StockMovementForm(FlaskForm):
     business_date = DateField(
         "تاريخ الحركة",
         format="%Y-%m-%d",
-        default=date.today,
+        default=business_today,
         validators=[DataRequired(message="التاريخ مطلوب.")],
     )
     statement = TextAreaField(
