@@ -2,24 +2,13 @@
 {% block title %}دفع نقدي — {{ meta.plural }}{% endblock %}
 {% block page_heading %}دفع نقدي{% endblock %}
 {% block content %}
-<section class="page-heading-row">
-  <div>
-    <p class="eyebrow">التحصيل والصندوق</p>
-    <h1>دفع نقدي — {{ meta.plural }}</h1>
-    <p class="heading-subtitle">يُسجّل الدفع في دفتر الحساب ويُضاف إلى الصندوق الرئيسي ضمن معاملة واحدة.</p>
-  </div>
-  <a class="secondary-button" href="{{ (url_for('parties.index') if party_type == 'all' else url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers')) }}">رجوع للحسابات</a>
-</section>
-
-<section class="content-card distribution-context">
-  <div class="context-icon">ر.ي</div>
-  <div><strong>تسجيل دفعة على الحساب</strong><p>{{ period_label }} · التاريخ الافتراضي اليوم</p></div>
+<section class="page-heading-row distribution-page-heading">
+  <div><h1>دفع نقدي — {{ meta.plural }}</h1></div>
 </section>
 
 <form method="post" class="distribution-form" id="payment-form">
   {{ form.hidden_tag() }}
-  <section class="content-card payment-form-card">
-    <div class="section-title"><div><h2>بيانات الدفع</h2><p>اختر الحساب لمراجعة ملخص الصرف قبل تسجيل الدفعة.</p></div></div>
+  <section class="content-card payment-form-card distribution-input-panel">
     <div class="form-field">
       {{ form.party_id.label(class_="field-label") }}
       {{ form.party_id(class_="form-control", **{'data-searchable':'true','data-payment-party':'true'}) }}
