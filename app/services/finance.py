@@ -45,8 +45,10 @@ def cash_account_balance(account_id):
 def create_cash_account(*, name, code, account_type="cash", actor_id=None, opening_balance=0, business_date=None):
     name = (name or "").strip()
     code = (code or "").strip().upper()
-    if not name or not code:
-        raise FinanceRuleError("اسم الحساب ورمزه مطلوبان.")
+    if not name:
+        raise FinanceRuleError("اسم الحساب مطلوب.")
+    if not code:
+        code = f"ACC-{uuid4().hex[:12].upper()}"
     if account_type not in {"cash", "bank", "other"}:
         raise FinanceRuleError("نوع الحساب غير صحيح.")
     try:
