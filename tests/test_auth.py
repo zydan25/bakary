@@ -30,28 +30,34 @@ def test_phone_normalization_supports_arabic_digits():
 
 def test_login_and_permission_protected_dashboard():
     app = make_app_with_admin()
-    client = app.test_client()
-    response = client.post(
-        "/auth/login",
-        data={"phone": "00967 771 234 567", "password": "Strong-pass-123"},
-        follow_redirects=True,
-    )
-    assert response.status_code == 200
-    assert "إدارة يومك من مكان واحد" in response.get_data(as_text=True)
-    teardown_database(app)
+    try:
+        client = app.test_client()
+        response = client.post(
+            "/auth/login",
+            data={"phone": "00967 771 234 567", "password": "Strong-pass-123"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        page = response.get_data(as_text=True)
+        assert "إدارة يومك من مكان واحد" in page
+        assert "الأصناف والتسعير" in page
+    finally:
+        teardown_database(app)
 
 
 def test_invalid_password_does_not_authenticate():
     app = make_app_with_admin()
-    client = app.test_client()
-    response = client.post(
-        "/auth/login",
-        data={"phone": "+967771234567", "password": "wrong-password"},
-        follow_redirects=True,
-    )
-    assert response.status_code == 200
-    assert "رقم الهاتف أو كلمة المرور غير صحيحة" in response.get_data(as_text=True)
-    teardown_database(app)
+    try:
+        client = app.test_client()
+        response = client.post(
+            "/auth/login",
+            data={"phone": "+967771234567", "password": "wrong-password"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert "رقم الهاتف أو كلمة المرور غير صحيحة" in response.get_data(as_text=True)
+    finally:
+        teardown_database(app)
 
 
 def test_protected_dashboard_redirects_to_sign_in():
