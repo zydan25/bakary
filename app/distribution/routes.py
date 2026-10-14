@@ -352,7 +352,12 @@ def payment_summary(party_type, party_id):
     party = db.session.scalar(payment_party_query)
     if party is None:
         return jsonify({"ok": False, "message": "الحساب غير موجود أو موقوف."}), 404
-    business_date = _parse_date(request.args.get("date"), business_today())
+    selected_period_id = request.args.get("period_id", type=int)
+    selected_period = db.session.scalar(select(BusinessPeriod).where(
+        BusinessPeriod.id == selected_period_id,
+        BusinessPeriod.status == "open",
+    )) if selected_period_id else None
+    business_date = selected_period.business_date if selected_period else _parse_date(request.args.get("date"), business_today())
     try:
         summary = party_period_summary(party.id, business_date, business_date)
     except BusinessRuleError as exc:
