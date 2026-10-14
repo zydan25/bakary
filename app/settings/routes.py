@@ -16,7 +16,22 @@ SETTING_DESCRIPTIONS = {
     "default_product_id": "معرف الصنف الافتراضي",
     "operating_period_mode": "daily أو morning_evening",
     "currency_code": "رمز العملة",
+    "dashboard_quick_actions": "الاختصارات الظاهرة في الصفحة الرئيسية",
 }
+
+QUICK_ACTION_OPTIONS = [
+    ("product_new", "إضافة صنف", "فتح نموذج إضافة صنف جديد"),
+    ("inventory_new", "إضافة مادة خام", "فتح نموذج إضافة مادة خام"),
+    ("production_batch", "تسجيل عجنة", "فتح نموذج تسجيل عجنة"),
+    ("employee_new", "إضافة موظف", "فتح نموذج إضافة موظف"),
+    ("free_recipient", "مستفيد مجاني", "فتح تسجيل مستفيد للتوزيع المجاني"),
+    ("expense_new", "تسجيل مصروف", "فتح نموذج مصروف جديد"),
+    ("products", "الأصناف", "فتح قائمة الأصناف"),
+    ("distributor_new", "إضافة موزع", "فتح نموذج إضافة موزع"),
+    ("customer_new", "إضافة عميل", "فتح نموذج إضافة عميل"),
+    ("account", "حسابي", "اختصار إلى صفحة الحساب"),
+]
+QUICK_ACTION_KEYS = tuple(key for key, _label, _description in QUICK_ACTION_OPTIONS)
 
 
 def _setting_value(key, default=None):
@@ -50,7 +65,18 @@ def index():
     if not products:
         flash("أضف صنفًا نشطًا واحدًا على الأقل قبل ضبط الصنف الافتراضي.", "error")
 
-    if form.validate_on_submit():
+    if request.method == "POST" and request.form.get("action") == "save_quick_actions":
+        requested = set(request.form.getlist("quick_actions"))
+        enabled = [key for key in QUICK_ACTION_KEYS if key in requested]
+        try:
+            _save_setting("dashboard_quick_actions", enabled)
+            db.session.commit()
+            flash("تم حفظ أزرار الإجراءات السريعة في الصفحة الرئيسية.", "success")
+            return redirect(url_for("settings.index"))
+        except Exception:
+            db.session.rollback()
+            flash("تعذر حفظ أزرار الإجراءات السريعة. لم يتم تأكيد التغييرات.", "error")
+    elif form.validate_on_submit():
         product = db.session.scalar(
             select(Product).where(
                 Product.id == form.default_product_id.data,
@@ -82,9 +108,18 @@ def index():
         mode = _setting_value("operating_period_mode", "daily")
         form.operating_period_mode.data = mode if mode in {"daily", "morning_evening"} else "daily"
 
+    saved_quick_actions = _setting_value("dashboard_quick_actions")
+    quick_actions_enabled = (
+        set(saved_quick_actions)
+        if isinstance(saved_quick_actions, list)
+        else set(QUICK_ACTION_KEYS)
+    )
+
     return render_template(
         "settings/index.html",
         form=form,
         products=products,
         active_default=next((product for product in products if product.is_default), None),
+        quick_action_options=QUICK_ACTION_OPTIONS,
+        quick_actions_enabled=quick_actions_enabled,
     )
