@@ -1,0 +1,22 @@
+{% extends "layouts/base.html" %}
+{% block title %}إعدادات المخبز{% endblock %}
+{% block page_heading %}إعدادات المخبز{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">الإدارة</p><h1>إعدادات المخبز</h1><p class="heading-subtitle">إعدادات عامة تؤثر على الواجهات الجديدة والفترات التشغيلية المستقبلية.</p></div>
+</section>
+<section class="content-card settings-guidance">
+ <div class="context-icon">⚙</div><div><strong>قبل تغيير نمط الفترات</strong><p>اختر الفترة اليومية أو الصباحية/المسائية بما يناسب تشغيل المخبز. لا يغيّر هذا الإعداد الفترات السابقة ولا يعيد فتح الفترات المختتمة.</p></div>
+</section>
+<form method="post" class="content-card settings-form">
+ {{ form.hidden_tag() }}
+ <div class="form-field">{{ form.business_name.label(class_="field-label") }}{{ form.business_name(class_="form-control",placeholder="اسم المخبز") }}{% for error in form.business_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="form-field">{{ form.default_product_id.label(class_="field-label") }}{{ form.default_product_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in form.default_product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}<small class="subtle-hint">يُختار هذا الصنف تلقائيًا عند فتح نموذج الصرف والعجنات، ويمكن للمستخدم تغييره.</small></div>
+ <div class="form-field">{{ form.operating_period_mode.label(class_="field-label") }}{{ form.operating_period_mode(class_="form-control",**{'data-searchable':'true'}) }}{% for error in form.operating_period_mode.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+ <div class="settings-current-values">
+  <div><small>الصنف الافتراضي الحالي</small><strong>{{ active_default.name if active_default else 'غير محدد' }}</strong></div>
+  <div><small>الأصناف المتاحة</small><strong>{{ products|length }}</strong></div>
+ </div>
+ <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ حفظ الإعدادات...">حفظ الإعدادات</button></div>
+</form>
+{% endblock %}
