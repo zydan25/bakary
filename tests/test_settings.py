@@ -1,5 +1,7 @@
 from decimal import Decimal
+from io import BytesIO
 
+from PIL import Image
 from sqlalchemy import select
 
 from app import create_app
