@@ -73,3 +73,37 @@ class PeriodHandover(TimestampMixin, db.Model):
     period = relationship("BusinessPeriod")
     receiver_employee = relationship("Employee")
     created_by = relationship("User")
+
+
+class PeriodRawMaterialClose(TimestampMixin, db.Model):
+    """Physical raw-material count and calculated production consumption at period close."""
+
+    __tablename__ = "period_raw_material_closes"
+    __table_args__ = (
+        CheckConstraint("opening_quantity >= 0", name="raw_close_opening_nonnegative"),
+        CheckConstraint("incoming_quantity >= 0", name="raw_close_incoming_nonnegative"),
+        CheckConstraint("other_outgoing_quantity >= 0", name="raw_close_other_outgoing_nonnegative"),
+        CheckConstraint("calculated_consumption >= 0", name="raw_close_consumption_nonnegative"),
+        CheckConstraint("previously_recorded_consumption >= 0", name="raw_close_previous_usage_nonnegative"),
+        CheckConstraint("ending_quantity >= 0", name="raw_close_ending_nonnegative"),
+        UniqueConstraint("period_id", "item_id", name="uq_period_raw_material_close"),
+    )
+
+    id = db.Column(Integer, primary_key=True)
+    period_id = db.Column(
+        Integer, ForeignKey("business_periods.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    item_id = db.Column(
+        Integer, ForeignKey("inventory_items.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    opening_quantity = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    incoming_quantity = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    other_outgoing_quantity = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    calculated_consumption = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    previously_recorded_consumption = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    ending_quantity = db.Column(Numeric(14, 3), nullable=False, default=Decimal("0.000"))
+    created_by_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    period = relationship("BusinessPeriod")
+    item = relationship("InventoryItem")
+    created_by = relationship("User")
