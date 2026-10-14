@@ -1,0 +1,9 @@
+Database schema changes are managed exclusively through Flask-Migrate/Alembic.
+
+Create a migration after changing ORM models:
+    flask --app wsgi:app db migrate -m "describe the change"
+
+Review the generated migration before applying it:
+    flask --app wsgi:app db upgrade
+
+Never edit a production schema manually. Back up the database before applying migrations in production.
