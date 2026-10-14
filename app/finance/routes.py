@@ -79,6 +79,7 @@ def add_account():
                 name=form.name.data,
                 code=form.code.data,
                 account_type=form.account_type.data,
+                opening_balance=form.opening_balance.data,
                 actor_id=current_user.id,
             )
             flash("تم إنشاء الحساب النقدي.", "success")
