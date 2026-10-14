@@ -23,23 +23,6 @@ class DoughBatchForm(FlaskForm):
             NumberRange(min=Decimal("0.001"), message="يجب أن تكون الكمية أكبر من صفر."),
         ],
     )
-    flour_mode = SelectField(
-        "احتساب الدقيق",
-        choices=[
-            ("none", "لا تسجل دقيقًا مع هذه العجنة"),
-            ("per_batch", "تسجيل دقيق هذه العجنة"),
-        ],
-        validators=[DataRequired(message="اختر طريقة احتساب الدقيق.")],
-    )
-    flour_item_id = SelectField("مادة الدقيق", coerce=int, validators=[])
-    flour_quantity = DecimalField(
-        "كمية الدقيق المستهلكة",
-        places=3,
-        validators=[
-            Optional(),
-            NumberRange(min=Decimal("0"), message="كمية الدقيق لا يمكن أن تكون سالبة."),
-        ],
-    )
     business_date = DateField(
         "تاريخ الإنتاج",
         format="%Y-%m-%d",
