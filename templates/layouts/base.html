@@ -144,6 +144,16 @@
         </section>
         {% endif %}
 
+        {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
+        <section class="tree-section" data-nav-section="staff">
+          <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">♙</span><span class="tree-heading-title">الموظفون والصلاحيات</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
+          <div class="tree-children" hidden>
+            {% if current_user.has_permission('employees.manage') %}<a class="tree-link" data-nav-link href="{{ url_for('staff.employees') }}"><span class="child-symbol">♙</span><span>الموظفون</span></a>{% endif %}
+            {% if current_user.has_permission('users.manage') %}<a class="tree-link" data-nav-link href="{{ url_for('staff.roles') }}"><span class="child-symbol">☷</span><span>الأدوار والصلاحيات</span></a>{% endif %}
+          </div>
+        </section>
+        {% endif %}
+
         <section class="tree-section" data-nav-section="access">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
             <span class="nav-symbol">♙</span><span class="tree-heading-title">إدارة الدخول</span>
