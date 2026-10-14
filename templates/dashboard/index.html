@@ -57,9 +57,9 @@
   {% endif %}
 </section>
 
-<section class="dashboard-modules-section">
+<section class="dashboard-modules-section{% if dashboard_card_theme == 'water_pos' %} dashboard-modules-section--water-pos{% endif %}">
   <div class="section-title"><h2>وحدات النظام</h2></div>
-  <div class="dashboard-module-grid">
+  <div class="dashboard-module-grid{% if dashboard_card_theme == 'water_pos' %} dashboard-module-grid--water-pos{% endif %}">
     {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('products.index') }}"><span class="dashboard-module-icon">{{ ui_icon('bread', 32) }}</span><strong>الأصناف والتسعير</strong><small>المنتجات والأسعار الافتراضية</small></a>
     {% endif %}
