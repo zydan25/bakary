@@ -69,7 +69,7 @@
           </div>
         </section>
         {% endif %}
-        {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') %}
+        {% if current_user.has_permission('distribution.issue') or current_user.has_permission('distribution.payment') or current_user.has_permission('distribution.reports') or current_user.has_permission('free_distribution.manage') %}
         <section class="tree-section" data-nav-section="distribution">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false">
             <span class="nav-symbol">↗</span><span class="tree-heading-title">الصرف والتحصيل</span>
@@ -150,7 +150,7 @@
           </div>
         </section>
         {% endif %}
-        {% if current_user.has_permission('settings.manage') or current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
+        {% if current_user.is_authenticated %}
         <section class="tree-section" data-nav-section="admin">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">⚙</span><span class="tree-heading-title">الإدارة</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
           <div class="tree-children" hidden>
