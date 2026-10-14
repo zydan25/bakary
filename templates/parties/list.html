@@ -8,9 +8,14 @@
     <h1>{{ meta.title }}</h1>
     <p class="heading-subtitle">إدارة البيانات والأسعار حسب كل صنف. الحساب المالي يظهر تلقائيًا بعد تسجيل حركات الصرف والدفع.</p>
   </div>
-  {% if can_manage %}
-  <a class="primary-button" href="{{ url_for(meta.endpoint, action='new', status=status, sort=sort) }}">＋ {{ meta.new_action }}</a>
-  {% endif %}
+  <div class="heading-actions">
+    {% if current_user.has_permission('distribution.reports') %}
+    <a class="secondary-button" href="{{ url_for('distribution.issue_report', party_type=party_type) }}">تقرير الصرف</a>
+    {% endif %}
+    {% if can_manage %}
+    <a class="primary-button" href="{{ url_for(meta.endpoint, action='new', status=status, sort=sort) }}">＋ {{ meta.new_action }}</a>
+    {% endif %}
+  </div>
 </section>
 
 <form class="search-toolbar" data-live-filter-target="#party-entity-list" method="get" action="{{ url_for(meta.endpoint) }}">
@@ -67,6 +72,15 @@
 
     {% if can_manage %}
     <div class="entity-actions">
+      {% if current_user.has_permission('distribution.issue') %}
+      <a class="secondary-button" href="{{ url_for('distribution.issue', party_type=party_type, party_id=item.id) }}">صرف</a>
+      {% endif %}
+      {% if current_user.has_permission('distribution.payment') %}
+      <a class="secondary-button" href="{{ url_for('distribution.payment', party_type=party_type, party_id=item.id) }}">دفع نقدي</a>
+      {% endif %}
+      {% if current_user.has_permission('distribution.reports') %}
+      <a class="secondary-button" href="{{ url_for('distribution.party_statement', party_type=party_type, party_id=item.id) }}">كشف الحساب</a>
+      {% endif %}
       <a class="secondary-button" href="{{ url_for(meta.endpoint, action='edit', edit=item.id, status=status, sort=sort, q=query or None) }}">تعديل البيانات والأسعار</a>
       <form method="post" action="{{ url_for(meta.toggle_endpoint, party_id=item.id) }}" data-confirm="{% if item.is_active %}هل تريد إيقاف هذا الحساب؟{% else %}هل تريد تفعيل هذا الحساب؟{% endif %}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
