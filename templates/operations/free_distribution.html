@@ -36,7 +36,7 @@
 <section class="entity-list">
  {% for recipient in recipients %}
  {% set issued = records | selectattr('recipient_id','equalto',recipient.id) | list %}
- <article class="entity-card" data-searchable-card data-search-text="{{ recipient.name }} {{ recipient.notes or '' }}">
+ <article class="entity-card" role="link" tabindex="0" data-card-navigation="{{ url_for('operations.recipient_detail',recipient_id=recipient.id) }}" data-searchable-card data-search-text="{{ recipient.name }} {{ recipient.notes or '' }}">
   <div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2><a class="entity-title-link" href="{{ url_for('operations.recipient_detail',recipient_id=recipient.id) }}">{{ recipient.name }}</a></h2><p>{{ recipient.default_product.name if recipient.default_product else 'لا يوجد صنف افتراضي' }} · الهدف اليومي {{ "{:,.3f}".format(recipient.daily_quantity) }}{% if recipient.notes %} · {{ recipient.notes }}{% endif %}</p></div>
    {% if not recipient.is_active %}<span class="status-badge status-muted">موقوف</span>{% elif issued %}<span class="status-badge status-primary">تم الصرف</span>{% else %}<span class="status-badge status-muted">لم يُصرف بعد</span>{% endif %}
   </div>
