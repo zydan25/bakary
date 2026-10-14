@@ -730,3 +730,26 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .stock-balance-panel > strong { font-size: 16px; }
   .production-period-banner { align-items: flex-start; }
 }
+
+
+/* Employee and role permission administration */
+.role-check-list, .role-selector-list, .permission-grid { display: grid; gap: 8px; }
+.role-check-item, .permission-check-item {
+  display: flex; min-width: 0; align-items: flex-start; gap: 10px; padding: 11px;
+  border: 1px solid #e4e9f1; border-radius: 12px; background: #fff;
+}
+.role-check-item input, .permission-check-item input { flex: 0 0 19px; width: 19px; height: 19px; margin-top: 3px; accent-color: var(--primary); }
+.role-check-item > span, .permission-check-item > span { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.role-check-item strong, .permission-check-item strong { color: #273246; font-size: 14px; }
+.role-check-item small, .permission-check-item small { color: #667085; font-size: 12px; line-height: 1.45; }
+.permission-check-item code { align-self: flex-start; color: #627089; font-size: 10px; overflow-wrap: anywhere; }
+.role-selector { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 12px; border: 1px solid #e0e6ef; border-radius: 12px; background: #fff; color: var(--text); text-decoration: none; }
+.role-selector strong { font-size: 14px; }
+.role-selector small { color: var(--muted); font-size: 12px; }
+.role-selector.is-selected { border-color: #b9cdf8; background: var(--primary-soft); color: #1748ae; }
+.role-selector.is-selected small { color: #3b568c; }
+.permission-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+@media (max-width: 480px) {
+  .permission-grid { grid-template-columns: minmax(0,1fr); }
+  .role-check-item, .permission-check-item { padding: 10px; }
+}
