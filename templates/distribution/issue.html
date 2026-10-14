@@ -1,0 +1,152 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ meta.title }}{% endblock %}
+{% block page_heading %}{{ meta.title }}{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div>
+    <p class="eyebrow">عمليات التوزيع</p>
+    <h1>{{ meta.title }}</h1>
+    <p class="heading-subtitle">سجّل الكمية؛ السعر والإجمالي يُحسبان من السعر الخاص بالحساب في الخادم.</p>
+  </div>
+  <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">رجوع للحسابات</a>
+</section>
+
+<section class="content-card distribution-context">
+  <div class="context-icon">↗</div>
+  <div><strong>صرف البضاعة للحساب</strong><p>الصنف الافتراضي محدد تلقائيًا، ويمكن تغييره قبل التسجيل.</p></div>
+</section>
+
+<form method="post" class="distribution-form" id="issue-form">
+  {{ form.hidden_tag() }}
+  <section class="content-card issue-form-card">
+    <div class="section-title"><div><h2>بيانات الصرف</h2><p>{{ period_label }} · التاريخ الافتراضي اليوم</p></div></div>
+
+    <div class="form-field">
+      {{ form.party_id.label(class_="field-label") }}
+      {{ form.party_id(class_="form-control", **{'data-searchable':'true','data-party-select':'true'}) }}
+      {% for error in form.party_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      <small class="latest-issue-note" id="latest-issue-note">
+        {% if last_issue %}آخر صرف: {{ last_issue.quantity }} {{ last_issue.product.unit_label }} — {{ last_issue.created_at.strftime('%Y-%m-%d %H:%M') if last_issue.created_at else '' }}{% endif %}
+      </small>
+    </div>
+
+    <div class="form-field">
+      {{ form.product_id.label(class_="field-label") }}
+      {{ form.product_id(class_="form-control", **{'data-searchable':'true','data-product-select':'true'}) }}
+      {% for error in form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      <small class="subtle-hint" id="issue-unit-price">{% if default_price is not none %}سعر الحبة: {{ "{:,.2f}".format(default_price) }} ريال{% endif %}</small>
+    </div>
+
+    <div class="form-field">
+      {{ form.quantity.label(class_="field-label") }}
+      {{ form.quantity(class_="form-control", inputmode="numeric", min="1", placeholder="أدخل الكمية", **{'data-quantity-words':'true','data-unit':chosen_product.unit_label if chosen_product else 'حبة'}) }}
+      {% for error in form.quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="form-field">
+      <label class="field-label" for="issue-total">الإجمالي على الحساب</label>
+      <input id="issue-total" class="form-control issue-total-field" value="{% if chosen_party and chosen_product and form.quantity.data %}{{ "%.2f"|format((default_price or 0) * form.quantity.data) }}{% endif %}" readonly data-amount-words="true" data-currency="ريال" aria-live="polite" placeholder="يحسب تلقائيًا">
+      <small id="issue-total-note" class="subtle-hint"></small>
+    </div>
+
+    <div class="form-field">
+      {{ form.business_date.label(class_="field-label") }}
+      {{ form.business_date(class_="form-control", type="date") }}
+      {% for error in form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="form-field">
+      {{ form.statement.label(class_="field-label") }}
+      {{ form.statement(class_="form-control", rows="2", placeholder="بيان اختياري") }}
+      {% for error in form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="dialog-actions">
+      <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل الصرف..." id="issue-submit">تسجيل صرف</button>
+      <a class="secondary-button" href="{{ url_for('parties.distributors' if party_type == 'distributor' else 'parties.customers') }}">إلغاء</a>
+    </div>
+  </section>
+</form>
+
+{% if saved_transaction %}
+<dialog class="form-dialog receipt-dialog" data-auto-open="true" id="issue-success-receipt">
+  <div class="dialog-header"><div><p class="eyebrow">تم التسجيل</p><h2>إيصال صرف</h2></div><a class="dialog-close" href="{{ url_for('distribution.issue', party_type=party_type) }}" aria-label="إغلاق">×</a></div>
+  <div class="receipt-content">
+    <div class="receipt-brand">نظام إدارة المخبز</div>
+    <div class="receipt-number">رقم العملية: {{ saved_transaction.id }}</div>
+    <div class="receipt-line"><span>التاريخ</span><strong>{{ saved_transaction.business_date.strftime('%Y-%m-%d') }}</strong></div>
+    <div class="receipt-line"><span>الحساب</span><strong>{{ saved_transaction.party.name }}</strong></div>
+    <div class="receipt-line"><span>الصنف</span><strong>{{ saved_transaction.product.name }}</strong></div>
+    <div class="receipt-line"><span>الكمية</span><strong>{{ saved_transaction.quantity }} {{ saved_transaction.product.unit_label }}</strong></div>
+    <div class="receipt-line"><span>سعر الوحدة</span><strong>{{ "{:,.2f}".format(saved_transaction.unit_price) }} ريال</strong></div>
+    <div class="receipt-line receipt-total"><span>الإجمالي على الحساب</span><strong>{{ "{:,.2f}".format(saved_transaction.total_amount) }} ريال</strong></div>
+    <p class="amount-words">{{ amount_words or '' }}</p>
+    {% if saved_transaction.statement %}<p class="receipt-statement">{{ saved_transaction.statement }}</p>{% endif %}
+    <div class="receipt-signature">برمجة وتصميم م. زيدان العطاب · يمن كود للتقنيات الذكية</div>
+    <div class="dialog-actions">
+      <button type="button" class="primary-button button-wide" data-save-receipt data-receipt-title="إيصال صرف" data-receipt-party="{{ saved_transaction.party.name }}" data-receipt-date="{{ saved_transaction.business_date.strftime('%Y-%m-%d') }}" data-receipt-quantity="{{ saved_transaction.quantity }} {{ saved_transaction.product.unit_label }}" data-receipt-total="{{ saved_transaction.total_amount }}" data-receipt-detail="{{ saved_transaction.product.name }} · سعر الوحدة {{ saved_transaction.unit_price }}">حفظ كصورة</button>
+      <a class="secondary-button" href="{{ url_for('distribution.issue', party_type=party_type) }}">إغلاق</a>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const party = document.querySelector("[data-party-select]");
+  const product = document.querySelector("[data-product-select]");
+  const quantity = document.getElementById("quantity");
+  const total = document.getElementById("issue-total");
+  const priceLabel = document.getElementById("issue-unit-price");
+  const totalNote = document.getElementById("issue-total-note");
+  const latest = document.getElementById("latest-issue-note");
+  if (!party || !product || !quantity || !total) return;
+  let requestSerial = 0;
+  const money = value => Number(value || 0).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+  async function refreshQuote() {
+    const serial = ++requestSerial;
+    const params = new URLSearchParams({
+      party_type: {{ party_type|tojson }},
+      party_id: party.value,
+      product_id: product.value,
+      quantity: quantity.value || "0"
+    });
+    if (!party.value || party.value === "0" || !product.value || product.value === "0") {
+      total.value = "";
+      total.dispatchEvent(new Event("input", {bubbles:true}));
+      if (priceLabel) priceLabel.textContent = "";
+      if (totalNote) totalNote.textContent = "";
+      if (latest) latest.textContent = "";
+      return;
+    }
+    try {
+      const response = await fetch("{{ url_for('distribution.quote') }}?" + params.toString(), {headers: {"Accept":"application/json"}});
+      const data = await response.json();
+      if (serial !== requestSerial || !data.ok) return;
+      const selectedOption = product.options[product.selectedIndex];
+      if (quantity.dataset.quantityWords) quantity.dataset.unit = data.unit || "حبة";
+      quantity.dispatchEvent(new Event("input", {bubbles:true}));
+      total.value = quantity.value && Number(quantity.value) > 0 ? data.total : "";
+      total.dispatchEvent(new Event("input", {bubbles:true}));
+      if (priceLabel) priceLabel.textContent = "سعر الوحدة: " + money(data.unit_price) + " ريال";
+      if (totalNote) totalNote.textContent = data.message || (data.price_ready ? "الإجمالي حسب السعر الخاص بهذا الحساب." : "اضبط السعر أولًا.");
+      if (latest) {
+        latest.textContent = data.last_issue
+          ? "آخر صرف: " + data.last_issue.quantity + " " + data.last_issue.unit + " — " + data.last_issue.time
+          : "لا يوجد صرف سابق مسجل لهذا الحساب.";
+      }
+      const submit = document.getElementById("issue-submit");
+      if (submit) submit.disabled = !data.price_ready;
+    } catch (_) {
+      if (serial !== requestSerial && totalNote) return;
+      if (totalNote) totalNote.textContent = "تعذر تحديث السعر الآن؛ سيعيد الخادم التحقق عند التسجيل.";
+    }
+  }
+  party.addEventListener("change", refreshQuote);
+  product.addEventListener("change", refreshQuote);
+  quantity.addEventListener("input", refreshQuote);
+  refreshQuote();
+})();
+</script>
+{% endblock %}
