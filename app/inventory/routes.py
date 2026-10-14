@@ -1,6 +1,7 @@
 """Raw-material item catalogue, stock intake, and movement history."""
 
 from datetime import date
+from app.services.clock import business_today
 from uuid import uuid4
 
 from flask import abort, flash, redirect, render_template, request, url_for
@@ -118,7 +119,7 @@ def stock():
         form.movement_type.data = request.args.get("kind", "addition")
         if form.movement_type.data not in {"opening_balance", "addition"}:
             form.movement_type.data = "addition"
-        form.business_date.data = date.today()
+        form.business_date.data = business_today()
         form.quantity.data = None
         form.request_id.data = str(uuid4().int % 2000000000 + 1)
     elif not form.request_id.data:
