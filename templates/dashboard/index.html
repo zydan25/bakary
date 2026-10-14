@@ -58,6 +58,12 @@
     {% if current_user.has_permission('products.manage') %}
     <a class="quick-action" href="{{ url_for('products.index', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة صنف</span></a>
     {% endif %}
+    {% if current_user.has_permission('inventory.manage') %}
+    <a class="quick-action" href="{{ url_for('inventory.index', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>إضافة مادة</span></a>
+    {% endif %}
+    {% if current_user.has_permission('production.manage') %}
+    <a class="quick-action" href="{{ url_for('production.index', action='batch') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>تسجيل عجنة</span></a>
+    {% endif %}
     {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
     <a class="quick-action" href="{{ url_for('products.index') }}"><span class="quick-action-plus">{{ ui_icon('list', 17) }}</span><span>الأصناف</span></a>
     {% endif %}
@@ -87,10 +93,10 @@
     {% endif %}
     {% endif %}
     {% if current_user.has_permission('production.view') or current_user.has_permission('production.manage') %}
-    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('oven', 32) }}</span><strong>العجنات والإنتاج</strong><small>الإنتاج وترحيل الفترات</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    <a class="dashboard-module module-ready" href="{{ url_for('production.index') }}"><span class="dashboard-module-icon">{{ ui_icon('oven', 32) }}</span><strong>العجنات والإنتاج</strong><small>تسجيل الإنتاج واستهلاك الدقيق</small></a>
     {% endif %}
     {% if current_user.has_permission('inventory.view') or current_user.has_permission('inventory.manage') %}
-    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('box', 32) }}</span><strong>المخزون</strong><small>المواد الخام وحركات الرصيد</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    <a class="dashboard-module module-ready" href="{{ url_for('inventory.index') }}"><span class="dashboard-module-icon">{{ ui_icon('box', 32) }}</span><strong>المخزون</strong><small>المواد الخام والأرصدة والحركات</small></a>
     {% endif %}
     {% if current_user.has_permission('free_distribution.manage') %}
     <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('gift', 32) }}</span><strong>التوزيع المجاني</strong><small>المستفيدون وصرف الفترة</small><span class="module-stage-label">مرحلة قادمة</span></article>
