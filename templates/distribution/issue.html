@@ -2,10 +2,6 @@
 {% block title %}{{ meta.title }}{% endblock %}
 {% block page_heading %}{{ meta.title }}{% endblock %}
 {% block content %}
-<section class="page-heading-row distribution-page-heading">
-  <div><h1>{{ meta.title }}</h1></div>
-</section>
-
 <form method="post" class="distribution-form" id="issue-form">
   {{ form.hidden_tag() }}
   <section class="content-card issue-form-card distribution-input-panel">
