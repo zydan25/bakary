@@ -1,0 +1,59 @@
+{% extends "layouts/base.html" %}
+{% block title %}تفاصيل فترة {{ weekday }}{% endblock %}
+{% block page_heading %}تفاصيل الفترة{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">تفاصيل التشغيل</p><h1>{{ weekday }} · {{ period_label(period.period_code) }}</h1><p class="heading-subtitle">{{ period.business_date.isoformat() }} · {{ 'فترة مفتوحة' if period.status == 'open' else 'فترة مختتمة' }}</p></div>
+ <div class="heading-actions">
+  <a class="secondary-button" href="{{ url_for('operations.periods_report') }}">تقرير الأيام</a>
+  {% if period.status == 'open' and current_user.has_permission('handover.manage') %}<a class="primary-button" href="{{ url_for('operations.closing',date=period.business_date.isoformat(),period_code=period.period_code,action='details') }}">إقفال الفترة</a>{% endif %}
+ </div>
+</section>
+<section class="report-totals-grid">
+ <div><small>الرصيد النقدي الافتتاحي</small><strong>{{ "{:,.2f}".format(cash_opening) }} ريال</strong></div>
+ <div><small>الإنتاج</small><strong>{{ "{:,.3f}".format(production_quantity) }}</strong></div>
+ <div><small>الصرف المدفوع</small><strong>{{ "{:,.3f}".format(paid_quantity) }} · {{ "{:,.2f}".format(paid_amount) }} ريال</strong></div>
+ <div><small>التحصيل</small><strong>{{ "{:,.2f}".format(payment_amount) }} ريال</strong></div>
+ <div><small>التوزيع المجاني</small><strong>{{ "{:,.3f}".format(free_quantity) }}</strong></div>
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>افتتاح الفترة</h2><p>من فتح الفترة وما كان متاحًا عند بدايتها.</p></div></div>
+ <div class="summary-line"><span>حالة الفترة</span><strong>{{ 'مفتوحة' if period.status == 'open' else 'مختتمة' }}</strong></div>
+ <div class="summary-line"><span>وقت الفتح</span><strong>{{ period.opened_at.strftime('%Y-%m-%d %H:%M') if period.opened_at else '—' }}</strong></div>
+ <div class="summary-line"><span>فتحها المستخدم</span><strong>{{ opener.full_name if opener else 'فتح تلقائي بواسطة النظام' }}</strong></div>
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>افتتاحية الأصناف وحركتها</h2><p>الافتتاحية والإنتاج والصرف والمتبقي لكل صنف.</p></div></div>
+ {% for row in product_rows %}
+ <div class="product-history-row"><div><strong>{{ row.product.name }}</strong><small>افتتاحي {{ "{:,.3f}".format(row.opening) }} · إنتاج {{ "{:,.3f}".format(row.produced) }} · صرف مدفوع {{ "{:,.3f}".format(row.paid) }} · مجاني {{ "{:,.3f}".format(row.free) }}</small></div><strong>متاح {{ "{:,.3f}".format(row.available) }} · متبقٍ {{ "{:,.3f}".format(row.remaining) }} {{ row.unit_label }}</strong></div>
+ {% else %}
+ {% for row in closed_rows %}<div class="product-history-row"><div><strong>{{ row.product.name }}</strong><small>افتتاحي {{ "{:,.3f}".format(row.opening_quantity) }} · إنتاج {{ "{:,.3f}".format(row.produced_quantity) }} · صرف مدفوع {{ "{:,.3f}".format(row.paid_distribution_quantity) }} · مجاني {{ "{:,.3f}".format(row.free_distribution_quantity) }} · تالف {{ "{:,.3f}".format(row.damaged_quantity) }} · مرحّل {{ "{:,.3f}".format(row.carried_quantity) }}</small></div><strong>بيع المحل {{ "{:,.3f}".format(row.shop_sale_quantity) }} {{ row.product.unit_label }}</strong></div>{% endfor %}
+ {% endfor %}
+</section>
+{% if material_rows %}
+<section class="content-card"><div class="section-title"><div><h2>حركة المواد الخام</h2></div></div>
+ {% for row in material_rows %}<div class="product-history-row"><div><strong>{{ row.item.name if row.item is defined else row.item_id }}</strong><small>افتتاحي {{ "{:,.3f}".format(row.opening_quantity) }} · وارد {{ "{:,.3f}".format(row.incoming_quantity) }}</small></div><strong>{{ "{:,.3f}".format(row.available_quantity if row.available_quantity is defined else row.ending_quantity) }} {{ row.item.unit_label if row.item is defined else '' }}</strong></div>{% endfor %}
+</section>
+{% endif %}
+<section class="content-card">
+ <div class="section-title"><div><h2>ديون الموزعين والعملاء</h2><p>الرصيد الحالي يشمل الديون المرحلة عبر الفترات.</p></div></div>
+ {% for row in party_summaries %}
+ <div class="product-history-row"><div><strong><a href="{{ url_for('parties.party_detail',party_type=row.party_type,party_id=row.party.id) }}">{{ row.party.name }}</a></strong><small>{{ 'موزع' if row.party_type == 'distributor' else 'عميل' }} · مسحوب {{ "{:,.3f}".format(row.quantity) }} · قيمة الصرف {{ "{:,.2f}".format(row.issued) }} · مدفوع {{ "{:,.2f}".format(row.paid) }}</small></div><strong>الرصيد {{ "{:,.2f}".format(row.remaining_due) }} ريال</strong></div>
+ {% else %}<p class="product-muted-empty">لا توجد حركات صرف أو دفع لهذه الفترة.</p>{% endfor %}
+</section>
+<section class="content-card">
+ <div class="section-title"><div><h2>حركات الفترة</h2></div></div>
+ {% for row in issues %}<div class="product-history-row"><div><strong>صرف · {{ row.party.name }} · {{ row.product.name }}</strong><small>{{ row.quantity }} {{ row.product.unit_label }} · {{ row.business_date.isoformat() }}</small></div><strong>{{ "{:,.2f}".format(row.total_amount) }} ريال</strong></div>{% endfor %}
+ {% for row in payments %}<div class="product-history-row"><div><strong>دفع · {{ row.party.name }}</strong><small>{{ row.business_date.isoformat() }} · {{ row.statement or '' }}</small></div><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>{% endfor %}
+ {% for row in batches %}<div class="product-history-row"><div><strong>إنتاج · {{ row.product.name }}</strong><small>عجنة {{ row.id }}</small></div><strong>{{ "{:,.3f}".format(row.produced_quantity) }} {{ row.product.unit_label }}</strong></div>{% endfor %}
+ {% for row in free_rows %}<div class="product-history-row"><div><strong>مجاني · {{ row.recipient.name }} · {{ row.product.name }}</strong><small>{{ row.statement or '' }}</small></div><strong>{{ "{:,.3f}".format(row.quantity) }} {{ row.product.unit_label }}</strong></div>{% endfor %}
+ {% for row in expenses %}<div class="product-history-row"><div><strong>مصروف · {{ row.title }}</strong><small>{{ row.statement or '' }}</small></div><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>{% endfor %}
+ {% if not issues and not payments and not batches and not free_rows and not expenses %}<p class="product-muted-empty">لا توجد حركات مسجلة حتى الآن.</p>{% endif %}
+</section>
+{% if handover %}
+<section class="content-card"><div class="section-title"><div><h2>إقفال الفترة والتسليم</h2><p>المبالغ التي تم استلامها وتسليمها.</p></div><span class="status-badge status-primary">مختتمة</span></div>
+ <div class="summary-line"><span>مسؤول التسليم</span><strong>{{ handover.receiver_employee.full_name }}</strong></div><div class="summary-line"><span>المبلغ المستلم</span><strong>{{ "{:,.2f}".format(handover.received_amount) }} ريال</strong></div><div class="summary-line"><span>الخرجيات</span><strong>{{ "{:,.2f}".format(handover.expenses_amount) }} ريال</strong></div><div class="summary-line"><span>المبلغ المسلم للصندوق</span><strong>{{ "{:,.2f}".format(handover.handed_to_cash_amount) }} ريال</strong></div><div class="summary-line"><span>الفرق المتوقع</span><strong>{{ "{:,.2f}".format(handover.cash_difference) }} ريال</strong></div>
+</section>
+{% endif %}
+{% if period.status == 'open' and current_user.has_permission('handover.manage') %}<a class="primary-button button-wide" href="{{ url_for('operations.closing',date=period.business_date.isoformat(),period_code=period.period_code,action='details') }}">إقفال الفترة</a>{% endif %}
+{% endblock %}
