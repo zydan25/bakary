@@ -1,25 +1,45 @@
 {% extends "layouts/base.html" %}
-{% block title %}حركة {{ item.name }}{% endblock %}
+{% block title %}حركة {{ item.name }}<dialog class="form-dialog" id="stock-correction-dialog" data-auto-open="{{ 'true' if show_correction_form else 'false' }}">
+ <div class="dialog-header"><div><p class="eyebrow">تصحيح يدوي مع سجل تدقيق</p><h2>تصحيح حركة #{{ correction_movement.id if correction_movement else '' }}</h2></div><a class="dialog-close" href="{{ url_for('inventory.movements', item_id=item.id) }}" aria-label="إغلاق">×</a></div>
+ {% if correction_movement and correction_form %}
+ <div class="inline-note">الكمية الأصلية: {{ "{:,.3f}".format(correction_movement.quantity) }} {{ item.unit_label }}. لن تُحذف الحركة الأصلية؛ سيسجّل النظام فرق الكمية فقط في حركة تسوية جديدة بتاريخ اليوم.</div>
+ <form method="post" action="{{ url_for('inventory.correct_manual_movement', item_id=item.id, movement_id=correction_movement.id) }}" class="form-stack">
+  {{ correction_form.hidden_tag() }}
+  <div class="form-field">{{ correction_form.corrected_quantity.label(class_="field-label") }}{{ correction_form.corrected_quantity(class_="form-control", inputmode="decimal", **{'data-quantity-words':'true','data-unit':item.unit_label}) }}{% for error in correction_form.corrected_quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ correction_form.reason.label(class_="field-label") }}{{ correction_form.reason(class_="form-control", rows="2", placeholder="مثال: الكمية الفعلية عند الإدخال كانت أقل بمقدار 5 كجم") }}{% for error in correction_form.reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ تسجيل التصحيح...">حفظ قيد التصحيح</button><a class="secondary-button" href="{{ url_for('inventory.movements', item_id=item.id) }}">إلغاء</a></div>
+ </form>
+ {% endif %}
+</dialog>
+{% endblock %}
 {% block page_heading %}حركة المادة{% endblock %}
 {% block content %}
-<section class="page-heading-row"><div><p class="eyebrow">دفتر المخزون</p><h1>حركة {{ item.name }}</h1><p class="heading-subtitle">رمز المادة: {{ item.code }} · الوحدة: {{ item.unit_label }}</p></div><div class="heading-actions"><button class="secondary-button" type="button" onclick="window.print()">طباعة</button><a class="secondary-button" href="{{ url_for('inventory.index') }}">رجوع للمخزون</a></div></section>
+<section class="page-heading-row"><div><p class="eyebrow">دفتر المخزون</p><h1>حركة {{ item.name }}</h1><p class="heading-subtitle">سجل حركة المادة وواردها واستهلاكها · الوحدة: {{ item.unit_label }}</p></div><div class="heading-actions"><button class="secondary-button" type="button" onclick="window.print()">طباعة</button><a class="secondary-button" href="{{ url_for('inventory.index') }}">رجوع للمخزون</a></div></section>
 
 <section class="content-card stock-current-card">
   <small>الرصيد الحالي</small>
   <strong>{{ "{:,.3f}".format(balance) }} {{ item.unit_label }}</strong>
 </section>
 
+<div class="inline-note inventory-audit-note"><strong>سجل قابل للمراجعة:</strong> لا نغيّر الحركات الأصلية المسجلة من أجل سلامة التدقيق. الحركات اليدوية يمكن تصحيح كميتها بقيد تسوية واضح بتاريخ اليوم، أما الحركات الناتجة عن الإنتاج والإقفال فلا تُعدّل منفردة لأنها مرتبطة بحسابات الفترة.</div>
+
+<section class="section-title"><h2>سجل الحركات</h2></section>
 <section class="entity-list">
   {% for row in rows %}
   <article class="entity-card">
     <div class="entity-top">
       <div class="entity-avatar">{{ '＋' if row.direction == 'in' else '−' }}</div>
-      <div class="entity-main"><h2>{% if row.movement_type == 'opening_balance' %}رصيد افتتاحي{% elif row.movement_type == 'addition' %}إضافة مخزون{% elif row.movement_type == 'production_consumption' %}استهلاك إنتاج{% else %}حركة مخزون{% endif %}</h2><p>{{ row.business_date.isoformat() }}{% if row.created_at %} · {{ row.created_at.strftime('%H:%M') }}{% endif %}</p></div>
+      <div class="entity-main"><h2>{% if row.movement_type == 'opening_balance' %}رصيد افتتاحي{% elif row.movement_type == 'addition' %}إضافة مخزون{% elif row.movement_type == 'production_consumption' %}استهلاك إنتاج{% elif row.movement_type == 'correction' %}تصحيح رصيد{% else %}حركة مخزون{% endif %}</h2><p>{{ row.business_date.isoformat() }}{% if row.created_at %} · {{ row.created_at.strftime('%H:%M') }}{% endif %}</p></div>
       <span class="status-badge {% if row.direction == 'in' %}status-primary{% else %}status-muted{% endif %}">{% if row.direction == 'in' %}وارد{% else %}صادر{% endif %}</span>
     </div>
     <div class="stock-balance-panel"><small>الكمية</small><strong class="{% if row.direction == 'in' %}summary-green{% else %}summary-red{% endif %}">{% if row.direction == 'out' %}−{% else %}+{% endif %}{{ "{:,.3f}".format(row.quantity) }} {{ item.unit_label }}</strong></div>
     {% if row.statement %}<p class="heading-subtitle">{{ row.statement }}</p>{% endif %}
     {% if row.unit_cost is not none %}<div class="entity-extra-line"><span>تكلفة الوحدة المسجلة</span><strong>{{ "{:,.2f}".format(row.unit_cost) }} ريال</strong></div>{% endif %}
+    {% if can_manage and row.id in correctable_movement_ids %}
+    <div class="entity-actions"><a class="secondary-button" href="{{ url_for('inventory.movements', item_id=item.id, correct=row.id) }}">تصحيح الحركة</a></div>
+    {% elif can_manage and row.movement_type in ['production_consumption'] %}
+    <div class="entity-extra-line"><span>مصدر الحركة</span><strong>عملية إنتاج/إقفال — غير قابلة للتعديل المباشر</strong></div>
+    {% endif %}
   </article>
   {% else %}
   <div class="empty-state"><h2>لا توجد حركات للمادة</h2><p>سجّل رصيدًا افتتاحيًا لبدء متابعة الكميات.</p></div>
