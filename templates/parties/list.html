@@ -40,7 +40,7 @@
 <section class="entity-list" id="party-entity-list" aria-label="{{ meta.title }}">
   {% for item in items %}
   {% set balance = balances.get(item.id, 0) %}
-  <article class="entity-card" data-searchable-card data-search-text="{{ item.name }} {{ item.phone or '' }}">
+  <article class="entity-card" role="link" tabindex="0" data-card-navigation="{{ url_for('parties.party_detail',party_type=party_type,party_id=item.id) }}" data-searchable-card data-search-text="{{ item.name }} {{ item.phone or '' }}">
     <div class="entity-top">
       <div class="entity-avatar">{{ '♙' if party_type == 'distributor' else '♧' }}</div>
       <div class="entity-main">
