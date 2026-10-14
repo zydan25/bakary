@@ -138,3 +138,51 @@ def test_inventory_and_production_pages_render_for_authorized_user():
         assert client.get("/production/?action=batch").status_code == 200
     finally:
         cleanup(app)
+
+
+
+def test_manual_stock_movement_correction_posts_an_auditable_adjustment():
+    app, user_id, _product_id, item_id = setup()
+    try:
+        with app.app_context():
+            original = db.session.scalar(select(InventoryMovement).where(
+                InventoryMovement.item_id == item_id,
+                InventoryMovement.source_type == "inventory_manual_request",
+                InventoryMovement.source_id == 800100,
+            ))
+            assert original is not None
+            original_id = original.id
+
+        client = app.test_client()
+        login = client.post(
+            "/auth/login",
+            data={"phone": "+967771234567", "password": "Strong-pass-123"},
+            follow_redirects=True,
+        )
+        assert login.status_code == 200
+        page = client.get(f"/inventory/{item_id}/movements?correct={original_id}")
+        assert page.status_code == 200
+        assert "الكمية الصحيحة لهذه الحركة" in page.get_data(as_text=True)
+
+        response = client.post(
+            f"/inventory/{item_id}/movements/{original_id}/correct",
+            data={"corrected_quantity": "95.000", "reason": "تصحيح نتيجة الجرد"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert "تم تصحيح رصيد الحركة" in response.get_data(as_text=True)
+        with app.app_context():
+            assert inventory_balance(item_id) == Decimal("95.000")
+            correction = db.session.scalar(select(InventoryMovement).where(
+                InventoryMovement.item_id == item_id,
+                InventoryMovement.source_type == "inventory_correction",
+                InventoryMovement.source_id == original_id,
+            ))
+            assert correction is not None
+            assert correction.movement_type == "correction"
+            assert correction.direction == "out"
+            assert correction.quantity == Decimal("5.000")
+            saved_original = db.session.get(InventoryMovement, original_id)
+            assert saved_original.quantity == Decimal("100.000")
+    finally:
+        cleanup(app)
