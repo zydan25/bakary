@@ -8,6 +8,10 @@ from sqlalchemy import or_, select
 
 from app.extensions import db
 from app.models.employee import Employee
+from app.models.distribution import DistributionIssue, PartyPayment
+from app.models.free_distribution import FreeDistribution
+from app.models.production import DoughBatch
+from app.models.closing import PeriodHandover
 from app.models.role import Permission, Role
 from app.models.user import User
 from app.services.phone import normalize_phone
@@ -242,3 +246,19 @@ def roles():
         selected_permission_codes=selected_permission_codes,
         role_form_error=role_form_error,
     )
+
+
+@staff_bp.get("/employees/<int:employee_id>")
+@login_required
+def employee_detail(employee_id):
+    _require("employees.manage")
+    employee = db.session.get(Employee, employee_id)
+    if employee is None:
+        abort(404)
+    actor_id = employee.user_id or -1
+    issues = db.session.scalars(select(DistributionIssue).where(DistributionIssue.created_by_id == actor_id).order_by(DistributionIssue.created_at.desc(), DistributionIssue.id.desc()).limit(30)).all()
+    payments = db.session.scalars(select(PartyPayment).where(PartyPayment.created_by_id == actor_id).order_by(PartyPayment.created_at.desc(), PartyPayment.id.desc()).limit(30)).all()
+    free_rows = db.session.scalars(select(FreeDistribution).where(FreeDistribution.created_by_id == actor_id).order_by(FreeDistribution.created_at.desc(), FreeDistribution.id.desc()).limit(30)).all()
+    batches = db.session.scalars(select(DoughBatch).where(DoughBatch.created_by_id == actor_id).order_by(DoughBatch.created_at.desc(), DoughBatch.id.desc()).limit(30)).all()
+    handovers = db.session.scalars(select(PeriodHandover).where(PeriodHandover.receiver_employee_id == employee.id).order_by(PeriodHandover.confirmed_at.desc(), PeriodHandover.id.desc()).limit(30)).all()
+    return render_template("staff/employee_detail.html", employee=employee, issues=issues, payments=payments, free_rows=free_rows, batches=batches, handovers=handovers)
