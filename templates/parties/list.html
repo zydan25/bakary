@@ -1,0 +1,133 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ meta.title }}{% endblock %}
+{% block page_heading %}{{ meta.title }}{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div>
+    <p class="eyebrow">إدارة الحسابات</p>
+    <h1>{{ meta.title }}</h1>
+    <p class="heading-subtitle">إدارة البيانات والأسعار حسب كل صنف. الحساب المالي يظهر تلقائيًا بعد تسجيل حركات الصرف والدفع.</p>
+  </div>
+  {% if can_manage %}
+  <a class="primary-button" href="{{ url_for(meta.endpoint, action='new', status=status, sort=sort) }}">＋ {{ meta.new_action }}</a>
+  {% endif %}
+</section>
+
+<form class="search-toolbar" data-live-filter-target="#party-entity-list" method="get" action="{{ url_for(meta.endpoint) }}">
+  <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث بالاسم أو رقم الهاتف" aria-label="بحث فوري" autocomplete="off"></label>
+  <select class="form-control party-sort-select" name="sort" data-searchable="true" data-live-submit aria-label="ترتيب الحسابات">
+    <option value="name" {% if sort == 'name' %}selected{% endif %}>الاسم: أ إلى ي</option>
+    <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>الاسم: ي إلى أ</option>
+    <option value="newest" {% if sort == 'newest' %}selected{% endif %}>الأحدث إضافة</option>
+    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>الأقدم إضافة</option>
+    <option value="balance_high" {% if sort == 'balance_high' %}selected{% endif %}>الأعلى رصيدًا</option>
+    <option value="balance_low" {% if sort == 'balance_low' %}selected{% endif %}>الأقل رصيدًا</option>
+  </select>
+  <input type="hidden" name="status" value="{{ status }}">
+  <button type="submit" class="secondary-button">بحث</button>
+</form>
+
+<div class="filter-chips" role="group" aria-label="حالة الحسابات">
+  <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for(meta.endpoint, status='active', q=query or None, sort=sort) }}">النشطة</a>
+  <a class="filter-chip {% if status == 'inactive' %}is-selected{% endif %}" href="{{ url_for(meta.endpoint, status='inactive', q=query or None, sort=sort) }}">الموقوفة</a>
+  <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for(meta.endpoint, status='all', q=query or None, sort=sort) }}">الكل</a>
+</div>
+
+<section class="entity-list" id="party-entity-list" aria-label="{{ meta.title }}">
+  {% for item in items %}
+  {% set balance = balances.get(item.id, 0) %}
+  <article class="entity-card" data-searchable-card data-search-text="{{ item.name }} {{ item.phone or '' }}">
+    <div class="entity-top">
+      <div class="entity-avatar">{{ '♙' if party_type == 'distributor' else '♧' }}</div>
+      <div class="entity-main">
+        <h2>{{ item.name }}</h2>
+        <p>{% if item.phone %}{{ item.phone }}{% else %}لا يوجد رقم هاتف{% endif %}</p>
+      </div>
+      {% if not item.is_active %}<span class="status-badge status-muted">موقوف</span>{% else %}<span class="status-badge status-primary">نشط</span>{% endif %}
+    </div>
+
+    <div class="party-balance">
+      <small>الرصيد الحالي</small>
+      <strong class="{% if balance > 0 %}balance-debit{% elif balance < 0 %}balance-credit{% endif %}">
+        {{ "{:,.2f}".format(balance|abs) }} ريال
+        {% if balance > 0 %}<small>عليه</small>{% elif balance < 0 %}<small>له</small>{% else %}<small>متزن</small>{% endif %}
+      </strong>
+    </div>
+
+    {% if item.notes %}<p class="heading-subtitle party-notes">{{ item.notes }}</p>{% endif %}
+
+    {% set active_prices = item.prices | selectattr('product.is_active') | list %}
+    {% if active_prices %}
+    <div class="party-price-list" aria-label="الأسعار الحالية">
+      {% for price in active_prices %}
+      <span class="party-price-chip">{{ price.product.name }} <strong>{{ "{:,.2f}".format(price.unit_price) }} ريال</strong></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if can_manage %}
+    <div class="entity-actions">
+      <a class="secondary-button" href="{{ url_for(meta.endpoint, action='edit', edit=item.id, status=status, sort=sort, q=query or None) }}">تعديل البيانات والأسعار</a>
+      <form method="post" action="{{ url_for(meta.toggle_endpoint, party_id=item.id) }}" data-confirm="{% if item.is_active %}هل تريد إيقاف هذا الحساب؟{% else %}هل تريد تفعيل هذا الحساب؟{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="quiet-button" type="submit">{% if item.is_active %}إيقاف{% else %}تفعيل{% endif %}</button>
+      </form>
+    </div>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty-state"><div class="empty-symbol">♧</div><h2>{{ meta.empty_title }}</h2><p>{{ meta.empty_body }}</p></div>
+  {% endfor %}
+</section>
+
+<dialog class="form-dialog" id="party-dialog" data-auto-open="{{ 'true' if show_form else 'false' }}">
+  <div class="dialog-header">
+    <div><p class="eyebrow">بيانات الحساب</p><h2>{% if form.party_id.data %}تعديل {{ meta.singular }}{% else %}{{ meta.new_action }}{% endif %}</h2></div>
+    <a class="dialog-close" href="{{ url_for(meta.endpoint, status=status, sort=sort) }}" aria-label="إغلاق">×</a>
+  </div>
+  <form method="post" class="form-stack">
+    {{ form.hidden_tag() }}
+    <div class="form-field">
+      {{ form.name.label(class_="field-label") }}
+      {{ form.name(class_="form-control", placeholder="الاسم الكامل أو اسم نقطة البيع", autocomplete="name") }}
+      {% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.phone.label(class_="field-label") }}
+      {{ form.phone(class_="form-control", placeholder="رقم الهاتف", inputmode="tel", dir="ltr") }}
+      {% for error in form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="form-field">
+      {{ form.notes.label(class_="field-label") }}
+      {{ form.notes(class_="form-control", placeholder="ملاحظات اختيارية", rows="2") }}
+      {% for error in form.notes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+
+    <div class="section-title section-title-spaced"><div><h2>أسعار الأصناف</h2><p>تظهر الأسعار العامة تلقائيًا؛ غيّر أي سعر لهذا الحساب فقط.</p></div></div>
+    {% if price_rows %}
+    <div class="party-price-editor-list">
+      {% for row in price_rows %}
+      <div class="party-price-editor">
+        <div class="party-price-info">
+          <strong>{{ row.product.name }}</strong>
+          <small>السعر العام: {{ "{:,.2f}".format(row.default_price) }} ريال لكل {{ row.product.unit_label }}</small>
+        </div>
+        <div class="party-price-input">
+          <label class="field-label" for="price-{{ row.product.id }}">السعر الخاص</label>
+          <input class="form-control" id="price-{{ row.product.id }}" name="price_{{ row.product.id }}" value="{{ row.value }}" inputmode="decimal" data-amount-words="true" data-currency="ريال" aria-label="سعر {{ row.product.name }} لهذا الحساب">
+        </div>
+        <div class="party-price-status">{% if row.is_custom %}مخصص لهذا الحساب{% else %}يتطابق حاليًا مع السعر العام{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><h2>لا توجد أصناف مفعّلة</h2><p>أضف صنفًا من صفحة الأصناف أولًا ليظهر هنا.</p></div>
+    {% endif %}
+
+    <div class="dialog-actions">
+      <button type="submit" class="primary-button button-wide" data-loading-label="جارٍ الحفظ...">حفظ {{ meta.singular }}</button>
+      <a class="secondary-button" href="{{ url_for(meta.endpoint, status=status, sort=sort) }}">إلغاء</a>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
