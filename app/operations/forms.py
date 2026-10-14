@@ -37,9 +37,8 @@ class FreeIssueForm(FlaskForm):
             NumberRange(min=Decimal("0.001"), message="الكمية يجب أن تكون أكبر من صفر."),
         ],
     )
-    business_date = DateField("التاريخ", format="%Y-%m-%d", default=business_today, validators=[DataRequired()])
-    period_code = SelectField("الفترة", validators=[DataRequired()])
-    statement = TextAreaField("البيان", validators=[Optional(), Length(max=1000)])
+    period_id = SelectField("الفترة التشغيلية", coerce=int, validators=[DataRequired(message="اختر فترة مفتوحة.")])
+    statement = TextAreaField("ملاحظات", validators=[Optional(), Length(max=1000)])
 
 
 class PeriodClosingForm(FlaskForm):
