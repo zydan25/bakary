@@ -117,7 +117,7 @@ def create_expense(*, title, amount, cash_account_id, business_date=None, statem
             created_by_id=actor_id,
         ))
         db.session.commit()
-        return expense
+        return expense, True
     except IntegrityError as exc:
         db.session.rollback()
         prior = db.session.scalar(select(Expense).where(Expense.request_key == key))
@@ -194,7 +194,7 @@ def create_cash_transfer(*, source_account_id, target_account_id, amount, busine
             ),
         ])
         db.session.commit()
-        return transfer
+        return transfer, True
     except IntegrityError as exc:
         db.session.rollback()
         prior = db.session.scalar(select(CashTransfer).where(CashTransfer.request_key == key))
