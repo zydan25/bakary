@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+{% block title %}مركز التقارير{% endblock %}
+{% block page_heading %}مركز التقارير{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">تقارير المخبز</p><h1>مركز التقارير</h1><p class="heading-subtitle">ملخص موحد حسب تاريخ العمل المختار، مع روابط إلى الكشوف التفصيلية.</p></div>
+ <button class="secondary-button" type="button" onclick="window.print()">طباعة الملخص</button>
+</section>
+
+<form class="content-card report-filter-form" method="get" action="{{ url_for('reports.index') }}">
+ <div class="form-field"><label class="field-label" for="report-date">تاريخ التقرير</label><input class="form-control" id="report-date" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
+ <button class="primary-button" type="submit">عرض التقرير</button>
+</form>
+
+{% if can_distribution or can_party %}
+<section class="section-title section-title-spaced"><div><h2>الصرف والتحصيل</h2><p>{{ selected_date.isoformat() }} · العمليات المسجلة لليوم</p></div></section>
+<div class="report-totals-grid">
+ <div><small>إجمالي كمية الصرف</small><strong>{{ "{:,.3f}".format(totals.get('issues_quantity',0)) }} حبة</strong></div>
+ <div><small>إجمالي قيمة الصرف</small><strong>{{ "{:,.2f}".format(totals.get('issues_amount',0)) }} ريال</strong></div>
+ <div><small>إجمالي الدفعات</small><strong>{{ "{:,.2f}".format(totals.get('payments_amount',0)) }} ريال</strong></div>
+</div>
+<section class="entity-list report-card-list">
+ {% for row in issue_by_type %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">↗</div><div class="entity-main"><h2>{{ row.label }}</h2><p>{{ row.count }} عملية صرف</p></div></div>
+  <div class="report-totals-grid compact"><div><small>الكمية</small><strong>{{ "{:,.3f}".format(row.quantity) }}</strong></div><div><small>القيمة</small><strong>{{ "{:,.2f}".format(row.amount) }} ريال</strong></div></div>
+  <a class="secondary-button" href="{{ row.url }}">فتح تقرير الصرف</a>
+ </article>
+ {% endfor %}
+ {% for row in payment_by_type %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">ر.ي</div><div class="entity-main"><h2>دفعات {{ row.label }}</h2><p>{{ row.count }} دفعة مسجلة</p></div></div>
+  <div class="stock-balance-panel"><small>المبلغ المقبوض</small><strong class="summary-green">{{ "{:,.2f}".format(row.amount) }} ريال</strong></div>
+ </article>
+ {% endfor %}
+ {% if not issue_by_type and not payment_by_type %}<div class="empty-state"><h2>لا توجد عمليات لهذا التاريخ</h2><p>ستظهر هنا العمليات عند تسجيل الصرف أو الدفعات.</p></div>{% endif %}
+</section>
+{% endif %}
+
+{% if can_production %}
+<section class="section-title section-title-spaced"><div><h2>الإنتاج والإقفال</h2><p>العجنات وكميات التوزيع والنتيجة المحفوظة للفترة.</p></div></section>
+<div class="report-totals-grid">
+ <div><small>إجمالي الإنتاج</small><strong>{{ "{:,.3f}".format(totals.get('produced_quantity',0)) }} حبة</strong></div>
+ <div><small>عدد العجنات</small><strong>{{ totals.get('batch_count',0) }}</strong></div>
+ <div><small>إجمالي المجاني</small><strong>{{ "{:,.3f}".format(totals.get('free_quantity',0)) }} حبة</strong></div>
+</div>
+<section class="entity-list">
+ {% for row in production_rows %}
+ <article class="entity-card"><div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ row[0] }}</h2><p>{{ row[3] }} عجنة</p></div></div><div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(row[2]) }} {{ row[1] }}</strong></div></article>
+ {% else %}<div class="empty-state"><h2>لا يوجد إنتاج مسجل</h2><p>لم تُسجل عجنات في التاريخ المحدد.</p></div>{% endfor %}
+</section>
+{% if closed_summary %}
+<section class="content-card">
+ <div class="section-title"><div><h2>خلاصة الإقفال المحفوظ</h2><p>هذه الأرقام من الإقفال المسجل للتاريخ المختار.</p></div><a class="secondary-button" href="{{ url_for('operations.closing',date=selected_date.isoformat()) }}">تفاصيل الإقفال</a></div>
+ <div class="report-totals-grid"><div><small>بيع المحل المتوقع</small><strong>{{ "{:,.2f}".format(closed_summary.expected_shop_sales) }} ريال</strong></div><div><small>كمية بيع المحل</small><strong>{{ "{:,.3f}".format(closed_summary.shop_sale_quantity) }}</strong></div><div><small>التالف</small><strong>{{ "{:,.3f}".format(closed_summary.damaged_quantity) }}</strong></div></div>
+ <div class="summary-line"><span>المتبقي المرحّل</span><strong>{{ "{:,.3f}".format(closed_summary.carried_quantity) }} حبة</strong></div>
+</section>
+{% endif %}
+{% endif %}
+
+{% if can_free and not can_production %}
+<section class="content-card"><div class="section-title"><div><h2>التوزيع المجاني</h2><p>إجمالي الكميات المجانية في الفترة المحددة.</p></div><a class="secondary-button" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat()) }}">تفاصيل المجاني</a></div>
+ <section class="entity-list">{% for row in free_rows %}<article class="entity-card"><div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2>{{ row[0] }}</h2><p>{{ row[3] }} عملية صرف</p></div></div><div class="stock-balance-panel"><small>الكمية</small><strong>{{ "{:,.3f}".format(row[2]) }} {{ row[1] }}</strong></div></article>{% else %}<div class="empty-state"><h2>لا يوجد صرف مجاني</h2><p>لا توجد كميات مجانية مسجلة لهذا التاريخ.</p></div>{% endfor %}</section>
+</section>
+{% endif %}
+
+{% if can_inventory %}
+<section class="section-title section-title-spaced"><div><h2>المخزون الحالي</h2><p>الأرصدة الحالية ليست مؤرخة بتاريخ التقرير، بل تمثل آخر رصيد مسجل.</p></div><a class="secondary-button" href="{{ url_for('inventory.index') }}">فتح المخزون</a></section>
+<div class="report-totals-grid"><div><small>عدد المواد الفعالة</small><strong>{{ totals.get('inventory_items',0) }}</strong></div><div><small>مواد منخفضة</small><strong>{{ totals.get('low_stock_count',0) }}</strong></div><div><small>الأساس</small><strong>دفتر الحركات</strong></div></div>
+<section class="entity-list">
+ {% for row in inventory_rows if row.is_low %}
+ <article class="entity-card"><div class="entity-top"><div class="entity-avatar">!</div><div class="entity-main"><h2>{{ row.name }}</h2><p>حد التنبيه: {{ "{:,.3f}".format(row.reorder_level) }} {{ row.unit_label }}</p></div><span class="status-badge status-warning">منخفض</span></div><div class="stock-balance-panel"><small>الرصيد</small><strong class="summary-red">{{ "{:,.3f}".format(row.balance) }} {{ row.unit_label }}</strong></div></article>
+ {% else %}<div class="empty-state"><h2>لا توجد مواد تحت حد التنبيه</h2><p>لا تظهر مواد منخفضة في الرصيد الحالي.</p></div>{% endfor %}
+</section>
+{% endif %}
+
+{% if can_finance %}
+<section class="section-title section-title-spaced"><div><h2>حركة النقدية</h2><p>{{ selected_date.isoformat() }} · الحركات النقدية المسجلة فقط</p></div><a class="secondary-button" href="{{ url_for('finance.index') }}">الصندوق والحسابات</a></section>
+<div class="report-totals-grid"><div><small>وارد</small><strong class="summary-green">{{ "{:,.2f}".format(totals.get('cash_in',0)) }} ريال</strong></div><div><small>صادر</small><strong class="summary-red">{{ "{:,.2f}".format(totals.get('cash_out',0)) }} ريال</strong></div><div><small>مصروفات</small><strong>{{ "{:,.2f}".format(totals.get('expenses',0)) }} ريال</strong></div></div>
+<div class="entity-list">{% for account in cash_rows %}<article class="entity-card"><div class="entity-top"><div class="entity-avatar">ر.ي</div><div class="entity-main"><h2>{{ account.name }}</h2><p>{{ account.code }}</p></div>{% if account.is_main %}<span class="status-badge status-primary">الصندوق الرئيسي</span>{% endif %}</div></article>{% endfor %}</div>
+{% endif %}
+{% endblock %}
