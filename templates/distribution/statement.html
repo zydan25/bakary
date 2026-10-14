@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}كشف حساب {{ party.name }}{% endblock %}
+{% block page_heading %}كشف الحساب{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+  <div><p class="eyebrow">{{ meta.singular }}</p><h1>كشف حساب {{ party.name }}</h1><p class="heading-subtitle">من {{ start_date.isoformat() }} إلى {{ end_date.isoformat() }}</p></div>
+  <button type="button" class="secondary-button" onclick="window.print()">طباعة</button>
+</section>
+
+<form class="content-card report-filter-form" method="get">
+  <div class="form-row">
+    <div class="form-field"><label class="field-label" for="statement-start">من تاريخ</label><input class="form-control" id="statement-start" type="date" name="start" value="{{ start_date.isoformat() }}"></div>
+    <div class="form-field"><label class="field-label" for="statement-end">إلى تاريخ</label><input class="form-control" id="statement-end" type="date" name="end" value="{{ end_date.isoformat() }}"></div>
+  </div>
+  <button class="primary-button button-wide" type="submit">عرض الكشف</button>
+</form>
+
+<section class="content-card statement-summary">
+  <div class="summary-line"><span>الرصيد الافتتاحي</span><strong>{{ "{:,.2f}".format(opening_balance|abs) }} ريال {% if opening_balance > 0 %}عليه{% elif opening_balance < 0 %}له{% else %}متزن{% endif %}</strong></div>
+  <div class="summary-line"><span>إجمالي الصرف</span><strong class="summary-red">{{ "{:,.2f}".format(debit_total) }} ريال</strong></div>
+  <div class="summary-line"><span>إجمالي المدفوع</span><strong class="summary-green">{{ "{:,.2f}".format(credit_total) }} ريال</strong></div>
+  <div class="summary-line summary-line-total"><span>الرصيد الختامي</span><strong>{{ "{:,.2f}".format(closing_balance|abs) }} ريال {% if closing_balance > 0 %}عليه{% elif closing_balance < 0 %}له{% else %}متزن{% endif %}</strong></div>
+</section>
+
+<section class="entity-list" aria-label="حركات كشف الحساب">
+  {% for row in entries %}
+  <article class="entity-card statement-entry">
+    <div class="entity-top"><div class="entity-avatar">{{ '↗' if row.debit > 0 else 'ر.ي' }}</div><div class="entity-main"><h2>{{ row.description }}</h2><p>{{ row.entry.business_date.isoformat() }}{% if row.entry.created_at %} · {{ row.entry.created_at.strftime('%H:%M') }}{% endif %}</p></div></div>
+    {% if row.quantity is not none %}
+    <div class="statement-extra"><span>الكمية: {{ row.quantity }} حبة</span>{% if row.unit_price is not none %}<span>سعر الوحدة: {{ "{:,.2f}".format(row.unit_price) }} ريال</span>{% endif %}</div>
+    {% endif %}
+    <div class="report-totals-grid compact">
+      <div><small>مدين (صرف)</small><strong>{% if row.debit %}{{ "{:,.2f}".format(row.debit) }}{% else %}—{% endif %}</strong></div>
+      <div><small>دائن (دفع)</small><strong>{% if row.credit %}{{ "{:,.2f}".format(row.credit) }}{% else %}—{% endif %}</strong></div>
+      <div><small>الرصيد بعد الحركة</small><strong>{{ "{:,.2f}".format(row.balance|abs) }} {% if row.balance > 0 %}عليه{% elif row.balance < 0 %}له{% else %}متزن{% endif %}</strong></div>
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state"><h2>لا توجد حركات في هذه الفترة</h2><p>لا توجد عمليات صرف أو دفع مسجلة بين التاريخين المحددين.</p></div>
+  {% endfor %}
+</section>
+{% endblock %}
