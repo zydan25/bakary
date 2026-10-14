@@ -1,0 +1,27 @@
+{% extends "layouts/base.html" %}
+{% block title %}تقرير الأيام والفترات{% endblock %}
+{% block page_heading %}تقرير الأيام والفترات{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">سجل التشغيل</p><h1>تقرير الأيام والفترات</h1><p class="heading-subtitle">الإنتاج والصرف المدفوع والمجاني والتحصيل والإقفال لكل فترة.</p></div>
+ {% if current_period %}<a class="primary-button" href="{{ url_for('operations.period_detail',period_id=current_period.id) }}">الفترة الحالية وتفاصيلها</a>{% endif %}
+</section>
+<section class="entity-list period-report-list">
+ {% for row in rows %}
+ <a class="entity-card period-report-card" href="{{ url_for('operations.period_detail',period_id=row.period.id) }}">
+  <div class="entity-top">
+   <div class="entity-avatar">▦</div>
+   <div class="entity-main"><h2>{{ row.weekday }} · {{ period_option_label(row.period) }}</h2><p>{{ row.period.business_date.isoformat() }} · {{ row.period.opened_at.strftime('%H:%M') if row.period.opened_at else '' }}</p></div>
+   <span class="status-badge {{ 'status-primary' if row.period.status == 'open' else 'status-muted' }}">{{ 'مفتوحة' if row.period.status == 'open' else 'مختتمة' }}</span>
+  </div>
+  <div class="report-totals-grid compact">
+   <div><small>الإنتاج</small><strong>{{ "{:,.3f}".format(row.produced_quantity) }}</strong></div>
+   <div><small>الصرف المدفوع</small><strong>{{ "{:,.3f}".format(row.issue_quantity) }} / {{ "{:,.2f}".format(row.issue_amount) }} ريال</strong></div>
+   <div><small>التحصيل</small><strong>{{ "{:,.2f}".format(row.payments) }} ريال</strong></div>
+   <div><small>التوزيع المجاني</small><strong>{{ "{:,.3f}".format(row.free_quantity) }}</strong></div>
+  </div>
+  {% if row.handover %}<p class="heading-subtitle">تم الإقفال والتسليم بواسطة {{ row.handover.receiver_employee.full_name }} · {{ "{:,.2f}".format(row.handover.handed_to_cash_amount) }} ريال للصندوق</p>{% endif %}
+ </a>
+ {% else %}<div class="empty-state"><h2>لا توجد فترات مسجلة</h2><p>افتح الفترة الحالية لبدء تسجيل العمليات.</p></div>{% endfor %}
+</section>
+{% endblock %}
