@@ -8,7 +8,7 @@
 </section>
 <form class="search-toolbar" data-live-filter-target="#employee-list" method="get">
  <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث باسم الموظف أو الهاتف" autocomplete="off" aria-label="بحث فوري"></label>
- <input type="hidden" name="status" value="{{ status }}"><button class="secondary-button" type="submit">بحث</button>
+ <input type="hidden" name="status" value="{{ status }}">
 </form>
 <div class="filter-chips">
  <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('staff.employees',status='active',q=query or None) }}">النشطون</a>
