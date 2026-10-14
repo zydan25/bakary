@@ -42,13 +42,19 @@ def cash_account_balance(account_id):
     return Decimal(str(value or 0)).quantize(CENT)
 
 
-def create_cash_account(*, name, code, account_type="cash", actor_id=None):
+def create_cash_account(*, name, code, account_type="cash", actor_id=None, opening_balance=0, business_date=None):
     name = (name or "").strip()
     code = (code or "").strip().upper()
     if not name or not code:
         raise FinanceRuleError("اسم الحساب ورمزه مطلوبان.")
     if account_type not in {"cash", "bank", "other"}:
         raise FinanceRuleError("نوع الحساب غير صحيح.")
+    try:
+        opening_amount = Decimal(str(opening_balance or 0)).quantize(CENT, rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise FinanceRuleError("الرصيد الافتتاحي غير صالح.") from exc
+    if not opening_amount.is_finite() or opening_amount < 0:
+        raise FinanceRuleError("الرصيد الافتتاحي لا يمكن أن يكون سالبًا.")
     existing = db.session.scalar(select(CashAccount.id).where(
         (func.upper(CashAccount.code) == code) | (CashAccount.name == name)
     ))
@@ -64,6 +70,19 @@ def create_cash_account(*, name, code, account_type="cash", actor_id=None):
     )
     db.session.add(account)
     try:
+        db.session.flush()
+        if opening_amount > 0:
+            db.session.add(CashMovement(
+                cash_account_id=account.id,
+                movement_type="opening_balance",
+                direction="in",
+                amount=opening_amount,
+                business_date=business_date or date.today(),
+                statement="رصيد افتتاحي للحساب",
+                source_type="cash_account_opening",
+                source_id=account.id,
+                created_by_id=actor_id,
+            ))
         db.session.commit()
         return account
     except IntegrityError as exc:
