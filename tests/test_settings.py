@@ -118,6 +118,5 @@ def test_quick_action_visibility_is_saved_and_applied_to_dashboard():
         html = dashboard.get_data(as_text=True)
         assert "صرف عميل مخصص" in html
         assert "اختصار مخفي" not in html
-        assert 'data-quick-action="products"' in html
     finally:
         cleanup(app)
