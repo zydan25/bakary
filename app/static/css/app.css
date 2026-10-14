@@ -834,3 +834,28 @@ textarea.form-control { min-height: 84px; resize: vertical; }
 .settings-current-values > div { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 11px; border: 1px solid #e7ebf2; border-radius: 12px; background: #fafbfe; }
 .settings-current-values small { color: #667085; font-size: 11px; }
 .settings-current-values strong { color: #273246; font-size: 14px; overflow-wrap: anywhere; }
+
+
+/* Final overrides for grouped role cards after shared employee form styles */
+.permission-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.permission-group-card { min-width: 0; overflow: hidden; border: 1px solid #e1e7f0; border-radius: 14px; background: #fff; }
+.permission-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 13px; border-bottom: 1px solid #e7edf5; background: #f7f9fd; }
+.permission-group-heading strong { color: #273246; font-size: 14px; }
+.permission-group-heading small { color: #667085; font-size: 11px; white-space: nowrap; }
+.permission-group-items { display: grid; gap: 7px; padding: 9px; }
+.permission-group-items .permission-check-item { padding: 9px; border-radius: 10px; }
+.permission-group-items .permission-check-item strong { font-size: 13px; }
+.permission-group-items .permission-check-item small { font-size: 11px; }
+.permission-group-items .permission-check-item code { font-size: 10px; }
+.role-selector-list { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
+.role-selector { min-height: 76px; border-radius: 13px; }
+.role-selector.is-selected { border-color: #8eaff1; background: #f0f5ff; box-shadow: inset 0 0 0 1px #dbe7ff; }
+.role-selector.is-selected::after { position: absolute; top: 9px; left: 9px; content: "✓"; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12px; }
+@media (max-width: 680px) {
+  .permission-groups { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .role-selector-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .role-selector { min-height: 72px; padding: 11px; }
+}
+@media (max-width: 390px) {
+  .role-selector-list { grid-template-columns: minmax(0, 1fr); }
+}
