@@ -704,3 +704,29 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .page-content { width: 100%; padding: 0 !important; }
   .content-card, .entity-card { break-inside: avoid; box-shadow: none; }
 }
+
+
+/* Inventory and production mobile views */
+.status-warning { border-color: #eed8a0; background: #fff8e8; color: #875a07; }
+.stock-overview { padding: 15px; }
+.stock-balance-panel { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 13px; padding: 11px 12px; border: 1px solid #e8edf4; border-radius: 12px; background: #fafbfe; }
+.stock-balance-panel small { color: #68758a; font-size: 12px; }
+.stock-balance-panel > strong { color: #253047; font-size: 19px; font-weight: 900; }
+.stock-balance-panel > strong small { display: inline; font-size: 11px; }
+.stock-value { color: #1748ae !important; }
+.entity-extra-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0 0; color: #748094; font-size: 12px; }
+.entity-extra-line strong { color: #344054; font-size: 13px; }
+.production-period-banner { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.production-period-mark { display: grid; flex: 0 0 48px; width: 48px; height: 48px; place-items: center; border: 1px solid #dce6fb; border-radius: 15px; background: #f1f5ff; color: var(--primary); font-size: 26px; }
+.production-period-copy { min-width: 0; }
+.production-period-copy > strong { display: block; margin-bottom: 4px; font-size: 15px; }
+.production-period-copy p { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; color: #667085; font-size: 12px; }
+.production-summary { padding: 15px; }
+.js-flour-fields[hidden] { display: none !important; }
+.stock-current-card { display: flex; flex-direction: column; gap: 6px; padding: 19px; }
+.stock-current-card small { color: #68758a; font-size: 13px; }
+.stock-current-card strong { color: #1748ae; font-size: 25px; }
+@media (max-width: 480px) {
+  .stock-balance-panel > strong { font-size: 16px; }
+  .production-period-banner { align-items: flex-start; }
+}
