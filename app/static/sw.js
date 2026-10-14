@@ -1,4 +1,4 @@
-const CACHE_NAME = "bakary-shell-v2";
+const CACHE_NAME = "bakary-shell-v3";
 const SHELL_ASSETS = [
   "/static/css/app.css",
   "/static/js/app.js",
