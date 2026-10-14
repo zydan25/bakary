@@ -70,6 +70,9 @@
     {% if current_user.has_permission('free_distribution.manage') %}
     <a class="quick-action" href="{{ url_for('operations.free_distribution', action='recipient') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>مستفيد مجاني</span></a>
     {% endif %}
+    {% if current_user.has_permission('expenses.manage') %}
+    <a class="quick-action" href="{{ url_for('finance.expenses', action='new') }}"><span class="quick-action-plus">{{ ui_icon('plus', 17) }}</span><span>تسجيل مصروف</span></a>
+    {% endif %}
     {% if current_user.has_permission('products.view') or current_user.has_permission('products.manage') %}
     <a class="quick-action" href="{{ url_for('products.index') }}"><span class="quick-action-plus">{{ ui_icon('list', 17) }}</span><span>الأصناف</span></a>
     {% endif %}
@@ -107,8 +110,8 @@
     {% if current_user.has_permission('free_distribution.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('operations.free_distribution') }}"><span class="dashboard-module-icon">{{ ui_icon('gift', 32) }}</span><strong>التوزيع المجاني</strong><small>المستفيدون وكميات الصرف للفترة</small></a>
     {% endif %}
-    {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') %}
-    <article class="dashboard-module module-pending" aria-disabled="true"><span class="dashboard-module-icon">{{ ui_icon('wallet', 32) }}</span><strong>الصندوق والحسابات</strong><small>القبض والمصروفات والتحويلات</small><span class="module-stage-label">مرحلة قادمة</span></article>
+    {% if current_user.has_permission('finance.view') or current_user.has_permission('finance.manage') or current_user.has_permission('expenses.manage') or current_user.has_permission('cash.accounts.manage') %}
+    <a class="dashboard-module module-ready" href="{{ url_for('finance.index') }}"><span class="dashboard-module-icon">{{ ui_icon('wallet', 32) }}</span><strong>الصندوق والحسابات</strong><small>الأرصدة والمصروفات والتحويلات</small></a>
     {% endif %}
     {% if current_user.has_permission('employees.manage') or current_user.has_permission('users.manage') %}
     <a class="dashboard-module module-ready" href="{{ url_for('staff.employees') }}"><span class="dashboard-module-icon">{{ ui_icon('users', 32) }}</span><strong>الموظفون والصلاحيات</strong><small>حسابات الدخول وتعيين الأدوار</small></a>
