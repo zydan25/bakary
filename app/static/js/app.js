@@ -116,11 +116,18 @@
     });
   }
 
-  // Modal forms open only after an explicit add/edit action.
+  // Reusable dialogs: account settings, forms, and app-style confirmations.
+  document.querySelectorAll("[data-open-dialog]").forEach((trigger) => {
+    trigger.addEventListener("click", () => {
+      const dialog = document.getElementById(trigger.dataset.openDialog);
+      if (!dialog) return;
+      try { if (!dialog.open) dialog.showModal(); } catch (_) {}
+    });
+  });
   document.querySelectorAll("dialog[data-auto-open='true']").forEach((dialog) => {
     try { if (!dialog.open) dialog.showModal(); } catch (_) {}
   });
-  document.querySelectorAll("dialog.form-dialog").forEach((dialog) => {
+  document.querySelectorAll("dialog.form-dialog, dialog.app-form-dialog, dialog.app-confirm-dialog").forEach((dialog) => {
     dialog.addEventListener("click", (event) => {
       if (event.target === dialog) dialog.close();
     });
@@ -128,6 +135,25 @@
       button.addEventListener("click", () => dialog.close());
     });
   });
+
+  const logoutForm = document.querySelector("form[data-app-logout]");
+  const logoutDialog = document.getElementById("logout-confirm-dialog");
+  if (logoutForm && logoutDialog) {
+    const cancelLogout = logoutDialog.querySelector("[data-cancel-logout]");
+    const confirmLogout = logoutDialog.querySelector("[data-confirm-logout]");
+    logoutForm.addEventListener("submit", (event) => {
+      if (logoutForm.dataset.confirmed === "true") return;
+      event.preventDefault();
+      try { if (!logoutDialog.open) logoutDialog.showModal(); } catch (_) {}
+    });
+    if (cancelLogout) cancelLogout.addEventListener("click", () => logoutDialog.close());
+    if (confirmLogout) confirmLogout.addEventListener("click", () => {
+      logoutDialog.close();
+      logoutForm.dataset.confirmed = "true";
+      if (logoutForm.requestSubmit) logoutForm.requestSubmit();
+      else logoutForm.submit();
+    });
+  }
 
   // Instant Arabic amount and quantity wording. The server still validates monetary values.
   const digitMap = { "٠":"0", "١":"1", "٢":"2", "٣":"3", "٤":"4", "٥":"5", "٦":"6", "٧":"7", "٨":"8", "٩":"9",
