@@ -12,7 +12,7 @@
   <title>{% block title %}نظام إدارة المخبز{% endblock %} | Bakary</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/bakary.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-ledger-records-ui2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20261014-account-dashboard-v1') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -201,7 +201,7 @@
         </div>
         {% if current_user.is_authenticated %}
         <div class="topbar-actions">
-          <form method="post" action="{{ url_for('auth.logout') }}" data-confirm="هل تريد تسجيل الخروج؟">
+          <form method="post" action="{{ url_for('auth.logout') }}" data-app-logout>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="icon-button logout-trigger" aria-label="تسجيل الخروج">↪</button>
           </form>
@@ -233,7 +233,18 @@
       {% endif %}
     </div>
   </div>
-  <script src="{{ url_for('static', filename='js/app.js', v='20261014-ledger-records-ui2') }}" defer></script>
+      {% if current_user.is_authenticated %}
+      <dialog class="app-confirm-dialog logout-confirm-dialog" id="logout-confirm-dialog" aria-labelledby="logout-confirm-title">
+        <div class="app-confirm-mark">↪</div>
+        <h2 id="logout-confirm-title">تسجيل الخروج</h2>
+        <p>هل تريد إنهاء جلستك والخروج من النظام؟</p>
+        <div class="app-confirm-actions">
+          <button type="button" class="secondary-button" data-cancel-logout>البقاء في النظام</button>
+          <button type="button" class="danger-button" data-confirm-logout>نعم، تسجيل الخروج</button>
+        </div>
+      </dialog>
+      {% endif %}
+  <script src="{{ url_for('static', filename='js/app.js', v='20261014-account-dialogs') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
