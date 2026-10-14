@@ -100,7 +100,7 @@ def test_issue_report_and_statement_render():
         report = client.get("/distribution/reports/issues/distributor")
         statement = client.get(f"/distribution/reports/statement/distributor/{party_id}")
         assert report.status_code == 200
-        assert "تقرير صرف الموزعون" in report.get_data(as_text=True)
+        assert "تقرير صرف الموزعين" in report.get_data(as_text=True)
         assert statement.status_code == 200
         assert "كشف حساب موزع اختبار" in statement.get_data(as_text=True)
     finally:
