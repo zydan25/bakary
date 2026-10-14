@@ -753,3 +753,22 @@ textarea.form-control { min-height: 84px; resize: vertical; }
   .permission-grid { grid-template-columns: minmax(0,1fr); }
   .role-check-item, .permission-check-item { padding: 10px; }
 }
+
+
+/* Period closing workflow */
+.closing-form { display: flex; flex-direction: column; gap: 14px; }
+.closing-product-list { display: grid; gap: 10px; }
+.closing-product-card { min-width: 0; padding: 13px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fbfcff; }
+.closing-product-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.closing-product-heading strong { font-size: 15px; }
+.closing-product-heading span { padding: 3px 8px; border: 1px solid #e0e7f2; border-radius: 7px; background: #fff; color: #667085; font-size: 11px; }
+.closing-calc-result { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 13px; border: 1px solid #dce6fa; border-radius: 14px; background: #f6f9ff; }
+.closing-calc-result > div { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.closing-calc-result small { color: #67758b; font-size: 11px; line-height: 1.4; }
+.closing-calc-result strong { color: #24334e; font-size: 14px; overflow-wrap: anywhere; }
+.closing-calc-result p { grid-column: 1 / -1; margin: 3px 0 0; color: #68758a; font-size: 11px; line-height: 1.5; }
+@media (max-width: 480px) {
+  .closing-calc-result { gap: 5px; padding: 10px; }
+  .closing-calc-result > div { gap: 5px; }
+  .closing-calc-result strong { font-size: 12px; }
+}
