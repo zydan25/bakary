@@ -31,6 +31,7 @@ from app.services.periods import PeriodRuleError, get_or_create_open_period, per
 PARTY_LABELS = {
     "distributor": {"title": "صرف موزع", "plural": "الموزعون", "plural_genitive": "الموزعين", "singular": "الموزع"},
     "customer": {"title": "صرف عميل", "plural": "العملاء والنقاط", "singular": "العميل"},
+    "all": {"title": "صرف عام", "plural": "الموزعون والعملاء", "plural_genitive": "الموزعين والعملاء", "singular": "الحساب"},
 }
 
 
@@ -46,12 +47,15 @@ def _require(permission):
 
 
 def _party_choices(party_type):
-    parties = db.session.scalars(
-        select(Party)
-        .where(Party.party_type == party_type, Party.is_active.is_(True))
-        .order_by(Party.name.asc())
-    ).all()
-    return [(0, "اختر الحساب...")] + [(party.id, party.name) for party in parties], parties
+    statement = select(Party).where(Party.is_active.is_(True))
+    if party_type != "all":
+        statement = statement.where(Party.party_type == party_type)
+    parties = db.session.scalars(statement.order_by(Party.name.asc())).all()
+    labels = [
+        (party.id, f"{party.name} — {'موزع' if party.party_type == 'distributor' else 'عميل'}" if party_type == "all" else party.name)
+        for party in parties
+    ]
+    return [(0, "اختر الحساب...")] + labels, parties
 
 
 def _product_choices():
@@ -139,7 +143,7 @@ def issue(party_type):
 
     saved_id = request.args.get("saved", type=int)
     saved_transaction = db.session.get(DistributionIssue, saved_id) if saved_id else None
-    if saved_transaction and saved_transaction.party.party_type != party_type:
+    if saved_transaction and party_type != "all" and saved_transaction.party.party_type != party_type:
         saved_transaction = None
 
     return render_template(
@@ -166,13 +170,13 @@ def quote():
     party_type = request.args.get("party_type", "")
     if party_type not in PARTY_LABELS:
         return jsonify({"ok": False, "message": "نوع الحساب غير صالح."}), 400
-    party = db.session.scalar(
-        select(Party).where(
-            Party.id == request.args.get("party_id", type=int),
-            Party.party_type == party_type,
-            Party.is_active.is_(True),
-        )
+    party_statement = select(Party).where(
+        Party.id == request.args.get("party_id", type=int),
+        Party.is_active.is_(True),
     )
+    if party_type != "all":
+        party_statement = party_statement.where(Party.party_type == party_type)
+    party = db.session.scalar(party_statement)
     product = db.session.scalar(
         select(Product).where(
             Product.id == request.args.get("product_id", type=int),
@@ -237,7 +241,7 @@ def payment(party_type):
     receipt_id = request.args.get("receipt", type=int)
     if receipt_id:
         saved = db.session.get(PartyPayment, receipt_id)
-        if saved and saved.party.party_type == party_type:
+        if saved and (party_type == "all" or saved.party.party_type == party_type):
             before = party_balance(saved.party_id) + Decimal(str(saved.amount))
             after = party_balance(saved.party_id)
             summary = party_period_summary(saved.party_id, saved.business_date, saved.business_date)
@@ -314,9 +318,10 @@ def payment(party_type):
 def payment_summary(party_type, party_id):
     _valid_party_type(party_type)
     _require("distribution.payment")
-    party = db.session.scalar(
-        select(Party).where(Party.id == party_id, Party.party_type == party_type, Party.is_active.is_(True))
-    )
+    payment_party_query = select(Party).where(Party.id == party_id, Party.is_active.is_(True))
+    if party_type != "all":
+        payment_party_query = payment_party_query.where(Party.party_type == party_type)
+    party = db.session.scalar(payment_party_query)
     if party is None:
         return jsonify({"ok": False, "message": "الحساب غير موجود أو موقوف."}), 404
     business_date = _parse_date(request.args.get("date"), business_today())
