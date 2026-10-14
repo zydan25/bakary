@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+{% block title %}الموزعون والعملاء{% endblock %}
+{% block page_heading %}الموزعون والعملاء{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">إدارة الحسابات</p><h1>الموزعون والعملاء</h1></div>
+ <div class="heading-actions">
+  {% if can_manage %}
+  <a class="secondary-button" href="{{ url_for('parties.distributors', action='new') }}">＋ إضافة موزع</a>
+  <a class="primary-button" href="{{ url_for('parties.customers', action='new') }}">＋ إضافة عميل</a>
+  {% endif %}
+ </div>
+</section>
+
+<form class="search-toolbar combined-party-toolbar" method="get" action="{{ url_for('parties.index') }}">
+ <label class="search-box"><span aria-hidden="true">⌕</span><input name="q" value="{{ query }}" placeholder="بحث بالاسم أو الهاتف" aria-label="بحث بالاسم أو الهاتف" autocomplete="off"></label>
+ <select class="form-control" name="party_type" aria-label="نوع الحساب" data-searchable="true">
+  <option value="all" {% if party_type_filter == 'all' %}selected{% endif %}>كل الأنواع</option>
+  <option value="distributor" {% if party_type_filter == 'distributor' %}selected{% endif %}>الموزعون</option>
+  <option value="customer" {% if party_type_filter == 'customer' %}selected{% endif %}>العملاء</option>
+ </select>
+ <select class="form-control" name="sort" aria-label="ترتيب الحسابات" data-searchable="true">
+  <option value="name" {% if sort == 'name' %}selected{% endif %}>الاسم: أ إلى ي</option>
+  <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>الاسم: ي إلى أ</option>
+  <option value="newest" {% if sort == 'newest' %}selected{% endif %}>الأحدث</option>
+  <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>الأقدم</option>
+  <option value="balance_high" {% if sort == 'balance_high' %}selected{% endif %}>الأعلى رصيدًا</option>
+  <option value="balance_low" {% if sort == 'balance_low' %}selected{% endif %}>الأقل رصيدًا</option>
+ </select>
+ <input type="hidden" name="status" value="{{ status }}">
+ <button type="submit" class="secondary-button">عرض</button>
+</form>
+
+<div class="filter-chips" role="group" aria-label="حالة الحسابات">
+ <a class="filter-chip {% if status == 'active' %}is-selected{% endif %}" href="{{ url_for('parties.index', status='active', party_type=party_type_filter, sort=sort, q=query or None) }}">النشطة</a>
+ <a class="filter-chip {% if status == 'inactive' %}is-selected{% endif %}" href="{{ url_for('parties.index', status='inactive', party_type=party_type_filter, sort=sort, q=query or None) }}">الموقوفة</a>
+ <a class="filter-chip {% if status == 'all' %}is-selected{% endif %}" href="{{ url_for('parties.index', status='all', party_type=party_type_filter, sort=sort, q=query or None) }}">الكل</a>
+</div>
+
+<section class="entity-list" id="combined-party-list" aria-label="قائمة الموزعين والعملاء">
+ {% for item in items %}
+ {% set balance = balances.get(item.id, 0) %}
+ <article class="entity-card combined-party-card" data-searchable-card data-search-text="{{ item.name }} {{ item.phone or '' }}">
+  <div class="entity-top">
+   <div class="entity-avatar">{{ '♙' if item.party_type == 'distributor' else '♧' }}</div>
+   <div class="entity-main"><h2>{{ item.name }}</h2><p>{{ item.phone or 'لا يوجد رقم هاتف' }}</p></div>
+   <div class="combined-party-badges">
+    <span class="status-badge status-primary">{{ 'موزع' if item.party_type == 'distributor' else 'عميل' }}</span>
+    <span class="status-badge {{ 'status-primary' if item.is_active else 'status-muted' }}">{{ 'نشط' if item.is_active else 'موقوف' }}</span>
+   </div>
+  </div>
+  <div class="party-balance">
+   <small>الرصيد الحالي</small>
+   <strong class="{% if balance > 0 %}balance-debit{% elif balance < 0 %}balance-credit{% endif %}">{{ "{:,.2f}".format(balance|abs) }} ريال <small>{% if balance > 0 %}عليه{% elif balance < 0 %}له{% else %}متزن{% endif %}</small></strong>
+  </div>
+  {% set active_prices = item.prices | selectattr('product.is_active') | list %}
+  {% if active_prices %}<div class="party-price-list">{% for price in active_prices %}<span class="party-price-chip">{{ price.product.name }} <strong>{{ "{:,.2f}".format(price.unit_price) }} ريال</strong></span>{% endfor %}</div>{% endif %}
+  {% if item.notes %}<p class="heading-subtitle party-notes">{{ item.notes }}</p>{% endif %}
+  <div class="entity-actions">
+   {% if current_user.has_permission('distribution.issue') %}
+   <a class="secondary-button" href="{{ url_for('distribution.issue', party_type=item.party_type, party_id=item.id) }}">صرف</a>
+   {% endif %}
+   {% if current_user.has_permission('distribution.payment') %}
+   <a class="secondary-button" href="{{ url_for('distribution.payment', party_type=item.party_type, party_id=item.id) }}">دفع</a>
+   {% endif %}
+   {% if current_user.has_permission('distribution.reports') %}
+   <a class="secondary-button" href="{{ url_for('distribution.party_statement', party_type=item.party_type, party_id=item.id) }}">كشف الحساب</a>
+   {% endif %}
+   {% if can_manage %}
+   <a class="secondary-button" href="{{ url_for('parties.distributors' if item.party_type == 'distributor' else 'parties.customers', action='edit', edit=item.id, status=status, sort=sort, q=query or None) }}">تعديل</a>
+   <form method="post" action="{{ url_for('parties.toggle_distributor' if item.party_type == 'distributor' else 'parties.toggle_customer', party_id=item.id) }}" data-confirm="{% if item.is_active %}هل تريد إيقاف هذا الحساب؟{% else %}هل تريد تفعيل هذا الحساب؟{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="quiet-button" type="submit">{{ 'إيقاف' if item.is_active else 'تفعيل' }}</button>
+   </form>
+   {% endif %}
+  </div>
+ </article>
+ {% else %}
+ <div class="empty-state"><div class="empty-symbol">♧</div><h2>لا توجد حسابات مطابقة</h2><p>جرّب تغيير البحث أو مرشح النوع، أو أضف موزعًا أو عميلًا جديدًا.</p></div>
+ {% endfor %}
+</section>
+{% endblock %}
