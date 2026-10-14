@@ -1,6 +1,7 @@
 """Validated forms for distributor/customer issue and cash collection."""
 
 from datetime import date
+from app.services.clock import business_today
 
 from flask_wtf import FlaskForm
 from wtforms import DateField, HiddenField, IntegerField, SelectField, TextAreaField, StringField
@@ -28,7 +29,7 @@ class IssueForm(FlaskForm):
     business_date = DateField(
         "تاريخ العملية",
         format="%Y-%m-%d",
-        default=date.today,
+        default=business_today,
         validators=[DataRequired(message="تاريخ العملية مطلوب.")],
     )
     statement = TextAreaField(
@@ -51,7 +52,7 @@ class PaymentForm(FlaskForm):
     business_date = DateField(
         "تاريخ الدفع",
         format="%Y-%m-%d",
-        default=date.today,
+        default=business_today,
         validators=[DataRequired(message="تاريخ الدفع مطلوب.")],
     )
     statement = TextAreaField(
