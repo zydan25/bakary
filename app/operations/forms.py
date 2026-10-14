@@ -14,7 +14,7 @@ class FreeRecipientForm(FlaskForm):
         "اسم المستفيد",
         validators=[DataRequired(message="اسم المستفيد مطلوب."), Length(max=160)],
     )
-    product_id = SelectField("الصنف المصروف", coerce=int, validators=[DataRequired(message="اختر الصنف.")])
+    product_id = SelectField("الصنف الافتراضي", coerce=int, validators=[DataRequired(message="اختر الصنف.")])
     quantity = DecimalField(
         "الكمية المصروفة",
         places=3,
@@ -23,8 +23,6 @@ class FreeRecipientForm(FlaskForm):
             NumberRange(min=Decimal("0.001"), message="الكمية يجب أن تكون أكبر من صفر."),
         ],
     )
-    business_date = DateField("تاريخ الصرف", format="%Y-%m-%d", default=business_today, validators=[DataRequired()])
-    period_code = SelectField("الفترة", validators=[DataRequired(message="اختر الفترة التشغيلية.")])
     notes = TextAreaField("ملاحظات", validators=[Optional(), Length(max=2000)])
 
 
