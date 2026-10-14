@@ -150,7 +150,7 @@
           <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.free_distribution') }}"><span class="child-symbol">♡</span><span>المستفيدون والصرف المجاني</span></a></div>
         </section>
         {% endif %}
-        {% if current_user.has_permission('production.manage') and current_user.has_permission('handover.manage') %}
+        {% if current_user.has_permission('handover.manage') %}
         <section class="tree-section" data-nav-section="closing">
           <button class="tree-heading" type="button" data-nav-toggle aria-expanded="false"><span class="nav-symbol">✓</span><span class="tree-heading-title">إقفال الفترة والتسليم</span><span class="tree-chevron" aria-hidden="true">‹</span></button>
           <div class="tree-children" hidden><a class="tree-link" data-nav-link href="{{ url_for('operations.closing') }}"><span class="child-symbol">✓</span><span>التقرير والتسليم النقدي</span></a></div>
