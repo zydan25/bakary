@@ -3,93 +3,82 @@
 {% block page_heading %}العجنات والإنتاج{% endblock %}
 {% block content %}
 <section class="page-heading-row">
-  <div><p class="eyebrow">الإنتاج</p><h1>العجنات والإنتاج</h1><p class="heading-subtitle">سجّل الصنف والكمية والتاريخ والفترة؛ ويُحتسب استهلاك المواد الخام عند إقفال الفترة.</p></div>
-  {% if can_manage %}
-  <div class="heading-actions">
-    <a class="primary-button" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code, action='batch') }}">＋ تسجيل عجنة</a>
-  </div>
-  {% endif %}
+ <div><p class="eyebrow">الإنتاج</p><h1>العجنات والإنتاج</h1><p class="heading-subtitle">سجّل الصنف والكمية والتاريخ والفترة والملاحظات فقط؛ يحسب استهلاك المواد الخام عند الإقفال.</p></div>
+ {% if can_manage %}<div class="heading-actions"><a class="primary-button" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code, action='batch') }}">＋ تسجيل عجنة</a></div>{% endif %}
 </section>
 
 <form class="content-card report-filter-form" method="get" action="{{ url_for('production.index') }}">
-  <div class="form-row">
-    <div class="form-field"><label class="field-label" for="production-date">التاريخ</label><input id="production-date" class="form-control" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
-    <div class="form-field"><label class="field-label" for="production-period">الفترة</label>
-      <select id="production-period" class="form-control" name="period_code" data-searchable="true">
-        {% for code, label in period_choices %}<option value="{{ code }}" {% if selected_code == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
-      </select>
-    </div>
-  </div>
-  <button class="secondary-button" type="submit">عرض الفترة</button>
+ <div class="form-row">
+  <div class="form-field"><label class="field-label" for="production-date">التاريخ</label><input id="production-date" class="form-control" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
+  <div class="form-field"><label class="field-label" for="production-period">الفترة</label><select id="production-period" class="form-control" name="period_code" data-searchable="true">{% for code,label in period_choices %}<option value="{{ code }}" {% if selected_code == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+ </div>
+ <button class="secondary-button" type="submit">عرض الفترة</button>
 </form>
 
 <section class="content-card production-period-banner">
-  <div class="production-period-mark">♨</div>
-  <div class="production-period-copy">
-    <strong>{{ selected_period_label }} · {{ selected_date.isoformat() }}</strong>
-    {% if period %}
-      <p>حالة الفترة: <span class="status-badge {% if period.status == 'open' %}status-primary{% else %}status-muted{% endif %}">{{ 'مفتوحة للإدخال' if period.status == 'open' else 'مختتمة' }}</span></p>
-    {% else %}
-      <p>لم تُفتح هذه الفترة بعد. تُنشأ تلقائيًا عند أول تسجيل إنتاج أو استهلاك دقيق.</p>
-    {% endif %}
-  </div>
+ <div class="production-period-mark">♨</div><div class="production-period-copy">
+  <strong>{{ selected_period_label }} · {{ selected_date.isoformat() }}</strong>
+  {% if period %}<p>حالة الفترة: <span class="status-badge {% if period.status == 'open' %}status-primary{% else %}status-muted{% endif %}">{{ 'مفتوحة للإدخال' if period.status == 'open' else 'مختتمة' }}</span></p>
+  {% else %}<p>لم تُفتح هذه الفترة بعد؛ تُنشأ عند تسجيل أول عجنة.</p>{% endif %}
+ </div>
 </section>
 
 <section class="content-card production-summary">
-  <div class="section-title"><div><h2>ملخص الفترة</h2><p>المجاميع الموثقة حتى الآن</p></div></div>
-  <div class="report-totals-grid">
-    <div><small>إجمالي المخبوز</small><strong>{{ "{:,.3f}".format(produced_total) }} حبة</strong></div>
-    <div><small>عدد العجنات</small><strong>{{ batches|length }}</strong></div>
-    <div><small>استهلاك المواد الخام</small><strong>يُحسب عند الإقفال</strong></div>
-  </div>
+ <div class="section-title"><h2>ملخص الفترة</h2></div>
+ <div class="report-totals-grid">
+  <div><small>إجمالي المخبوز</small><strong>{{ "{:,.3f}".format(produced_total) }}</strong></div>
+  <div><small>عدد العجنات</small><strong>{{ batches|length }}</strong></div>
+  <div><small>استهلاك المواد الخام</small><strong>عند الإقفال</strong></div>
+ </div>
 </section>
 
 <section class="section-title section-title-spaced"><div><h2>الإنتاج حسب الصنف</h2><p>إجمالي الكمية المنتجة لكل صنف خلال الفترة المحددة.</p></div></section>
 <section class="entity-list">
-  {% for product in products if produced_by_product.get(product.id, 0) > 0 %}
-  <article class="entity-card">
-    <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ product.name }}</h2><p>ملخص الإنتاج للفترة</p></div></div>
-    <div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(produced_by_product.get(product.id, 0)) }} {{ product.unit_label }}</strong></div>
-  </article>
-  {% else %}
-  <div class="empty-state"><h2>لا يوجد إنتاج مسجل</h2><p>سيظهر ملخص كل صنف بعد تسجيل العجنات.</p></div>
-  {% endfor %}
+ {% for product in products if produced_by_product.get(product.id, 0) > 0 %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ product.name }}</h2><p>ملخص الإنتاج للفترة</p></div></div>
+  <div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(produced_by_product.get(product.id, 0)) }} {{ product.unit_label }}</strong></div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا يوجد إنتاج مسجل</h2><p>سيظهر ملخص كل صنف بعد تسجيل العجنات.</p></div>{% endfor %}
 </section>
 
-<section class="section-title section-title-spaced"><div><h2>العجنات المسجلة</h2><p>كل عجنة لها سجل مستقل، ويمكن مراجعة إنتاج كل صنف.</p></div></section>
+<section class="section-title section-title-spaced"><div><h2>العجنات المسجلة</h2></div></section>
 <section class="entity-list">
-  {% for batch in batches %}
-  <article class="entity-card">
-    <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ batch.product.name }}</h2><p>{{ batch.period.business_date.isoformat() }} · {% if batch.period.period_code == 'morning' %}الفترة الصباحية{% elif batch.period.period_code == 'evening' %}الفترة المسائية{% else %}اليوم كاملًا{% endif %}</p></div><span class="status-badge status-primary">مسجلة</span></div>
-    <div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(batch.produced_quantity) }} {{ batch.product.unit_label }}</strong></div>
-    {% if batch.statement %}<p class="heading-subtitle">{{ batch.statement }}</p>{% endif %}
-  </article>
-  {% else %}
-  <div class="empty-state"><div class="empty-symbol">♨</div><h2>لا توجد عجنات لهذه الفترة</h2><p>سجّل أول عجنة لبدء حساب إنتاج الفترة.</p></div>
-  {% endfor %}
+ {% for batch in batches %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">♨</div><div class="entity-main"><h2>{{ batch.product.name }}</h2><p>{{ batch.period.business_date.isoformat() }} · {% if batch.period.period_code == 'morning' %}الفترة الصباحية{% elif batch.period.period_code == 'evening' %}الفترة المسائية{% else %}اليوم كاملًا{% endif %}</p></div><span class="status-badge status-primary">مسجلة</span></div>
+  <div class="stock-balance-panel"><small>الكمية المنتجة</small><strong>{{ "{:,.3f}".format(batch.produced_quantity) }} {{ batch.product.unit_label }}</strong></div>
+  {% if batch.statement %}<p class="heading-subtitle">{{ batch.statement }}</p>{% endif %}
+ </article>
+ {% else %}<div class="empty-state"><div class="empty-symbol">♨</div><h2>لا توجد عجنات لهذه الفترة</h2><p>سجّل أول عجنة لبدء حساب إنتاج الفترة.</p></div>{% endfor %}
 </section>
-
 
 <dialog class="form-dialog" id="dough-batch-dialog" data-auto-open="{{ 'true' if show_batch_form else 'false' }}">
-  <div class="dialog-header"><div><p class="eyebrow">الإنتاج</p><h2>تسجيل عجنة جديدة</h2></div><a class="dialog-close" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
-  <form method="post" action="{{ url_for('production.create_batch') }}" class="form-stack" id="dough-batch-form">
-    {{ batch_form.hidden_tag() }}
-    <div class="form-field">{{ batch_form.product_id.label(class_="field-label") }}{{ batch_form.product_id(class_="form-control", **{'data-searchable':'true','data-batch-product':'true'}) }}{% for error in batch_form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="form-field">{{ batch_form.produced_quantity.label(class_="field-label") }}{{ batch_form.produced_quantity(class_="form-control", inputmode="decimal", placeholder="أدخل الكمية المنتجة", **{'data-quantity-words':'true','data-unit':'حبة'}) }}{% for error in batch_form.produced_quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="form-row">
-      <div class="form-field">{{ batch_form.business_date.label(class_="field-label") }}{{ batch_form.business_date(class_="form-control", type="date") }}{% for error in batch_form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-      <div class="form-field">{{ batch_form.period_code.label(class_="field-label") }}{{ batch_form.period_code(class_="form-control", **{'data-searchable':'true'}) }}{% for error in batch_form.period_code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    </div>
-    <div class="form-field">{{ batch_form.statement.label(class_="field-label") }}{{ batch_form.statement(class_="form-control", rows="2", placeholder="ملاحظات عن العجنة") }}{% for error in batch_form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل العجنة...">تسجيل العجنة</button><a class="secondary-button" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code) }}">إلغاء</a></div>
-  </form>
+ <div class="dialog-header"><div><p class="eyebrow">الإنتاج</p><h2>تسجيل عجنة جديدة</h2></div><a class="dialog-close" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
+ <form method="post" action="{{ url_for('production.create_batch') }}" class="form-stack" id="dough-batch-form">
+  {{ batch_form.hidden_tag() }}
+  <div class="form-field">{{ batch_form.product_id.label(class_="field-label") }}{{ batch_form.product_id(class_="form-control", **{'data-searchable':'true','data-batch-product':'true'}) }}{% for error in batch_form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ batch_form.produced_quantity.label(class_="field-label") }}{{ batch_form.produced_quantity(class_="form-control", inputmode="decimal", placeholder="أدخل الكمية المنتجة", **{'data-quantity-words':'true','data-unit':'حبة'}) }}{% for error in batch_form.produced_quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-row">
+   <div class="form-field">{{ batch_form.business_date.label(class_="field-label") }}{{ batch_form.business_date(class_="form-control", type="date") }}{% for error in batch_form.business_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+   <div class="form-field">{{ batch_form.period_code.label(class_="field-label") }}{{ batch_form.period_code(class_="form-control", **{'data-searchable':'true'}) }}{% for error in batch_form.period_code.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  </div>
+  <div class="form-field">{{ batch_form.statement.label(class_="field-label") }}{{ batch_form.statement(class_="form-control", rows="2", placeholder="ملاحظات عن العجنة") }}{% for error in batch_form.statement.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="dialog-actions"><button type="submit" class="primary-button button-wide" data-loading-label="جارٍ تسجيل العجنة...">تسجيل العجنة</button><a class="secondary-button" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code) }}">إلغاء</a></div>
+ </form>
 </dialog>
-
-<dialog class="form-dialog" id="period-flour-dialog" data-auto-open="{{ 'true' if show_flour_form else 'false' }}">
-  <div class="dialog-header"><div><p class="eyebrow">استهلاك المواد الخام</p><h2>إجمالي الدقيق للفترة</h2></div><a class="dialog-close" href="{{ url_for('production.index', date=selected_date.isoformat(), period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
-  <form method="post" action="{{ url_for('production.create_flour_usage') }}" class="form-stack">
-    {{ flour_form.hidden_tag() }}
-    <div class="form-field">{{ flour_form.item_id.label(class_="field-label") }}{{ flour_form.item_id(class_="form-control", **{'data-searchable':'true'}) }}{% for error in flour_form.item_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-    <div class="form-field">{{ flour_form.quantity.label(class_="field-label") }}{{ flour_form.quantity(class_="form-control", inputmode="decimal", placeholder="إجمالي كمية الدقيق لكل العجنات", **{'data-quantity-words':'true','data-unit':'كجم'}) }}{% for error in flour_form
 {% endblock %}
+{% block scripts %}
+<script>
+(() => {
+ const product = document.querySelector("[data-batch-product]");
+ const productionQty = document.querySelector("[name='produced_quantity']");
+ const productUnits = {{ product_units|tojson }};
+ product?.addEventListener("change", () => {
+   if (!productionQty) return;
+   productionQty.dataset.unit = productUnits[product.value] || "حبة";
+   productionQty.dispatchEvent(new Event("input", {bubbles:true}));
+ });
+})();
+</script>
 {% endblock %}
