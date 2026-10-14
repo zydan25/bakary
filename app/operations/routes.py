@@ -82,15 +82,20 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     issue_form.recipient_id.choices = [(0, "اختر المستفيد...")] + [(row.id, row.name) for row in active_recipients]
     issue_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
     issue_form.period_code.choices = _period_choices()
+    recipient_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
+    recipient_form.period_code.choices = _period_choices()
+    default_product = next((row for row in products if row.is_default), products[0] if products else None)
     if request.method == "GET" and issue_form.recipient_id.data in (None, 0):
         issue_form.recipient_id.data = request.args.get("recipient_id", type=int) or 0
     if request.method == "GET" and issue_form.product_id.data in (None, 0):
-        default_product = next((row for row in products if row.is_default), products[0] if products else None)
         issue_form.product_id.data = default_product.id if default_product else 0
     if request.method == "GET":
         issue_form.business_date.data = selected_date
         issue_form.period_code.data = selected_code
         issue_form.quantity.data = None
+        recipient_form.product_id.data = default_product.id if default_product else 0
+        recipient_form.business_date.data = selected_date
+        recipient_form.period_code.data = selected_code
     return render_template(
         "operations/free_distribution.html",
         recipients=recipients,
@@ -121,18 +126,62 @@ def free_distribution():
 def create_free_recipient():
     _require("free_distribution.manage")
     form = FreeRecipientForm()
+    products = db.session.scalars(
+        select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
+    ).all()
+    form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
+    form.period_code.choices = _period_choices()
     if form.validate_on_submit():
-        recipient = FreeRecipient(
-            name=form.name.data.strip(),
-            notes=(form.notes.data or "").strip() or None,
-            is_active=True,
-            created_by_id=current_user.id,
-        )
-        db.session.add(recipient)
-        db.session.commit()
-        flash("تمت إضافة المستفيد المجاني.", "success")
-        return redirect(url_for("operations.free_distribution"))
-    return _free_context(recipient_form=form, action="recipient")
+        try:
+            product = db.session.scalar(
+                select(Product).where(Product.id == form.product_id.data, Product.is_active.is_(True))
+            )
+            if product is None:
+                raise ValueError("الصنف غير موجود أو موقوف.")
+            period, _created = get_or_create_open_period(
+                business_date=form.business_date.data,
+                period_code=form.period_code.data,
+                actor_id=current_user.id,
+            )
+            recipient = FreeRecipient(
+                name=form.name.data.strip(),
+                notes=(form.notes.data or "").strip() or None,
+                is_active=True,
+                created_by_id=current_user.id,
+            )
+            db.session.add(recipient)
+            db.session.flush()
+            issue = FreeDistribution(
+                period_id=period.id,
+                recipient_id=recipient.id,
+                product_id=product.id,
+                quantity=form.quantity.data,
+                statement="صرف مجاني عند إضافة المستفيد",
+                created_by_id=current_user.id,
+            )
+            db.session.add(issue)
+            db.session.commit()
+            flash("تمت إضافة المستفيد وتسجيل الكمية المصروفة ضمن الفترة المحددة.", "success")
+            return redirect(url_for(
+                "operations.free_distribution",
+                date=form.business_date.data.isoformat(),
+                period_code=form.period_code.data,
+            ))
+        except (PeriodRuleError, ValueError) as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
+        except IntegrityError:
+            db.session.rollback()
+            flash("تعذر تسجيل المستفيد والصرف؛ لم يتم اعتماد العملية.", "error")
+        except Exception:
+            db.session.rollback()
+            flash("تعذر إضافة المستفيد والصرف المجاني. لم يتم تأكيد الحفظ.", "error")
+    return _free_context(
+        recipient_form=form,
+        action="recipient",
+        selected_date=form.business_date.data,
+        selected_code=form.period_code.data,
+    )
 
 
 @operations_bp.post("/free-recipients/<int:recipient_id>/toggle")
