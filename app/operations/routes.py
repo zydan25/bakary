@@ -54,8 +54,9 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     selected_date = selected_date or _parse_date(request.args.get("date") or request.form.get("business_date"))
     selected_code = _clean_period_code(selected_code or request.args.get("period_code") or request.form.get("period_code"))
     recipients = db.session.scalars(
-        select(FreeRecipient).where(FreeRecipient.is_active.is_(True)).order_by(FreeRecipient.name.asc())
+        select(FreeRecipient).order_by(FreeRecipient.is_active.desc(), FreeRecipient.name.asc())
     ).all()
+    active_recipients = [row for row in recipients if row.is_active]
     products = db.session.scalars(
         select(Product).where(Product.is_active.is_(True)).order_by(Product.is_default.desc(), Product.name.asc())
     ).all()
@@ -74,7 +75,7 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
 
     recipient_form = recipient_form or FreeRecipientForm()
     issue_form = issue_form or FreeIssueForm()
-    issue_form.recipient_id.choices = [(0, "اختر المستفيد...")] + [(row.id, row.name) for row in recipients]
+    issue_form.recipient_id.choices = [(0, "اختر المستفيد...")] + [(row.id, row.name) for row in active_recipients]
     issue_form.product_id.choices = [(0, "اختر الصنف...")] + [(row.id, row.name) for row in products]
     issue_form.period_code.choices = _period_choices()
     if request.method == "GET" and issue_form.recipient_id.data in (None, 0):
@@ -89,6 +90,7 @@ def _free_context(*, recipient_form=None, issue_form=None, action=None, selected
     return render_template(
         "operations/free_distribution.html",
         recipients=recipients,
+        active_recipients=active_recipients,
         products=products,
         records=records,
         period=period,
