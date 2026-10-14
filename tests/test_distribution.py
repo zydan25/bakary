@@ -93,16 +93,15 @@ def test_issue_and_collection_create_ledger_and_cash_entries():
 
 
 def test_issue_report_and_statement_render():
-    app, (party_id, product_id) = setup()
+    app, (party_id, _product_id) = setup()
     try:
         client = app.test_client()
         login(client)
-        response = client.post("/distribution/issue/customer", data={
-            "party_id": str(party_id), "product_id": str(product_id),
-            "quantity": "2", "business_date": date.today().isoformat(),
-            "statement": "", "request_key": "invalid-partytype-test-001"
-        }, follow_redirects=True)
-        # An account of distributor type cannot be used as a customer.
-        assert response.status_code in (200, 400)
+        report = client.get("/distribution/reports/issues/distributor")
+        statement = client.get(f"/distribution/reports/statement/distributor/{party_id}")
+        assert report.status_code == 200
+        assert "تقرير صرف الموزعون" in report.get_data(as_text=True)
+        assert statement.status_code == 200
+        assert "كشف حساب موزع اختبار" in statement.get_data(as_text=True)
     finally:
         cleanup(app)
