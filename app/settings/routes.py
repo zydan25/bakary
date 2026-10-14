@@ -18,6 +18,7 @@ SETTING_DESCRIPTIONS = {
     "operating_period_mode": "daily أو morning_evening",
     "currency_code": "رمز العملة",
     "dashboard_quick_actions": "الاختصارات الظاهرة في الصفحة الرئيسية",
+    "dashboard_card_theme": "تصميم بطاقات وحدات الصفحة الرئيسية",
 }
 
 QUICK_ACTION_OPTIONS = [
@@ -106,6 +107,19 @@ def index():
         except Exception:
             db.session.rollback()
             flash("تعذر حفظ إعداد الشريط السفلي.", "error")
+    elif request.method == "POST" and request.form.get("action") == "save_dashboard_card_theme":
+        selected_theme = (request.form.get("dashboard_card_theme") or "current").strip()
+        if selected_theme not in {"current", "water_pos"}:
+            flash("اختر تصميمًا صحيحًا لبطاقات الصفحة الرئيسية.", "error")
+        else:
+            try:
+                _save_setting("dashboard_card_theme", selected_theme)
+                db.session.commit()
+                flash("تم حفظ تصميم بطاقات الصفحة الرئيسية.", "success")
+                return redirect(url_for("settings.index"))
+            except Exception:
+                db.session.rollback()
+                flash("تعذر حفظ تصميم بطاقات الصفحة الرئيسية.", "error")
     elif form.validate_on_submit():
         product = db.session.scalar(
             select(Product).where(
@@ -141,6 +155,9 @@ def index():
     saved_quick_actions = _setting_value("dashboard_quick_actions")
     quick_actions = normalize_quick_actions(saved_quick_actions)
     show_bottom_nav = _setting_value("show_bottom_nav", True) is not False
+    dashboard_card_theme = _setting_value("dashboard_card_theme", "current")
+    if dashboard_card_theme not in {"current", "water_pos"}:
+        dashboard_card_theme = "current"
 
     return render_template(
         "settings/index.html",
@@ -149,4 +166,5 @@ def index():
         active_default=next((product for product in products if product.is_default), None),
         quick_actions=quick_actions,
         show_bottom_nav=show_bottom_nav,
+        dashboard_card_theme=dashboard_card_theme,
     )
