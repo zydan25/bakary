@@ -1,0 +1,74 @@
+{% extends "layouts/base.html" %}
+{% block title %}التوزيع المجاني{% endblock %}
+{% block page_heading %}التوزيع المجاني{% endblock %}
+{% block content %}
+<section class="page-heading-row">
+ <div><p class="eyebrow">التوزيع المجاني</p><h1>المستفيدون المجانيون</h1><p class="heading-subtitle">سجّل المستفيد مرة واحدة، ثم سجل ما صُرف له في كل فترة تشغيلية.</p></div>
+ <a class="primary-button" href="{{ url_for('operations.free_distribution',action='recipient',date=selected_date.isoformat(),period_code=selected_code) }}">＋ إضافة مستفيد</a>
+</section>
+
+<form class="content-card report-filter-form" method="get" action="{{ url_for('operations.free_distribution') }}">
+ <div class="form-row">
+  <div class="form-field"><label class="field-label" for="free-date">التاريخ</label><input class="form-control" id="free-date" type="date" name="date" value="{{ selected_date.isoformat() }}"></div>
+  <div class="form-field"><label class="field-label" for="free-period">الفترة</label><select class="form-control" id="free-period" name="period_code" data-searchable="true">{% for code,label in period_choices %}<option value="{{ code }}" {% if code == selected_code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+ </div>
+ <button class="secondary-button" type="submit">عرض الفترة</button>
+</form>
+
+<section class="content-card production-period-banner">
+ <div class="production-period-mark">♡</div><div class="production-period-copy"><strong>{{ selected_period_label }} · {{ selected_date.isoformat() }}</strong>
+ {% if period %}<p>حالة الفترة: <span class="status-badge {% if period.status == 'open' %}status-primary{% else %}status-muted{% endif %}">{{ 'مفتوحة للصرف' if period.status == 'open' else 'مختتمة' }}</span></p>{% else %}<p>لم تُفتح الفترة بعد؛ تُنشأ عند أول صرف مجاني.</p>{% endif %}</div>
+</section>
+
+<section class="section-title section-title-spaced"><div><h2>المستفيدون</h2><p>زر الصرف يسجل كمية وصنفًا للفترة المختارة.</p></div></section>
+<section class="entity-list">
+ {% for recipient in recipients %}
+ {% set issued = records | selectattr('recipient_id','equalto',recipient.id) | list %}
+ <article class="entity-card">
+  <div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2>{{ recipient.name }}</h2><p>{{ recipient.notes or 'لا توجد ملاحظات' }}</p></div>
+   {% if issued %}<span class="status-badge status-primary">تم الصرف</span>{% else %}<span class="status-badge status-muted">لم يُصرف بعد</span>{% endif %}
+  </div>
+  {% if issued %}
+  <div class="party-price-list">{% for record in issued %}<span class="party-price-chip">{{ record.product.name }} <strong>{{ "{:,.3f}".format(record.quantity) }} {{ record.product.unit_label }}</strong></span>{% endfor %}</div>
+  {% endif %}
+  <div class="entity-actions">
+   {% if not period or period.status == 'open' %}<a class="primary-button" href="{{ url_for('operations.free_distribution',action='issue',recipient_id=recipient.id,date=selected_date.isoformat(),period_code=selected_code) }}">صرف لهذا المستفيد</a>{% endif %}
+   <form method="post" action="{{ url_for('operations.toggle_free_recipient',recipient_id=recipient.id) }}" data-confirm="هل تريد إيقاف هذا المستفيد من القوائم الجديدة؟"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="quiet-button" type="submit">إيقاف</button></form>
+  </div>
+ </article>
+ {% else %}<div class="empty-state"><h2>لا يوجد مستفيدون مجانيون</h2><p>أضف الأسماء والملاحظات، ثم سجل الصرف الفعلي لكل فترة.</p></div>{% endfor %}
+</section>
+
+<section class="section-title section-title-spaced"><div><h2>المجاني المصروف للفترة</h2><p>هذه الكميات تخصم عند إقفال الإنتاج، ولا تنشئ دينًا على موزع أو عميل.</p></div></section>
+<section class="entity-list">
+ {% for record in records %}
+ <article class="entity-card"><div class="entity-top"><div class="entity-avatar">♡</div><div class="entity-main"><h2>{{ record.recipient.name }}</h2><p>{{ record.product.name }} · {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else selected_date.isoformat() }}</p></div></div>
+ <div class="stock-balance-panel"><small>الكمية المصروفة</small><strong>{{ "{:,.3f}".format(record.quantity) }} {{ record.product.unit_label }}</strong></div>
+ {% if record.statement %}<p class="heading-subtitle">{{ record.statement }}</p>{% endif %}</article>
+ {% else %}<div class="empty-state"><h2>لم يسجل صرف مجاني لهذه الفترة</h2><p>تظهر العمليات هنا فور حفظها.</p></div>{% endfor %}
+</section>
+
+<dialog class="form-dialog" id="free-recipient-dialog" data-auto-open="{{ 'true' if show_recipient_form else 'false' }}">
+ <div class="dialog-header"><div><p class="eyebrow">قائمة المستفيدين</p><h2>إضافة مستفيد مجاني</h2></div><a class="dialog-close" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat(),period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
+ <form method="post" action="{{ url_for('operations.create_free_recipient') }}" class="form-stack">
+  {{ recipient_form.hidden_tag() }}
+  <div class="form-field">{{ recipient_form.name.label(class_="field-label") }}{{ recipient_form.name(class_="form-control",placeholder="اسم المستفيد") }}{% for error in recipient_form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ recipient_form.notes.label(class_="field-label") }}{{ recipient_form.notes(class_="form-control",rows="2",placeholder="ملاحظات اختيارية") }}</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ الحفظ...">حفظ المستفيد</button><a class="secondary-button" href="{{ url_for('operations.free_distribution') }}">إلغاء</a></div>
+ </form>
+</dialog>
+
+<dialog class="form-dialog" id="free-issue-dialog" data-auto-open="{{ 'true' if show_issue_form else 'false' }}">
+ <div class="dialog-header"><div><p class="eyebrow">صرف مجاني</p><h2>تسجيل صرف للمستفيد</h2></div><a class="dialog-close" href="{{ url_for('operations.free_distribution',date=selected_date.isoformat(),period_code=selected_code) }}" aria-label="إغلاق">×</a></div>
+ <form method="post" action="{{ url_for('operations.create_free_issue') }}" class="form-stack">
+  {{ issue_form.hidden_tag() }}
+  <div class="form-field">{{ issue_form.recipient_id.label(class_="field-label") }}{{ issue_form.recipient_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in issue_form.recipient_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ issue_form.product_id.label(class_="field-label") }}{{ issue_form.product_id(class_="form-control",**{'data-searchable':'true'}) }}{% for error in issue_form.product_id.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-field">{{ issue_form.quantity.label(class_="field-label") }}{{ issue_form.quantity(class_="form-control",inputmode="decimal",**{'data-quantity-words':'true','data-unit':'حبة'}) }}{% for error in issue_form.quantity.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+  <div class="form-row"><div class="form-field">{{ issue_form.business_date.label(class_="field-label") }}{{ issue_form.business_date(class_="form-control",type="date") }}</div><div class="form-field">{{ issue_form.period_code.label(class_="field-label") }}{{ issue_form.period_code(class_="form-control",**{'data-searchable':'true'}) }}</div></div>
+  <div class="form-field">{{ issue_form.statement.label(class_="field-label") }}{{ issue_form.statement(class_="form-control",rows="2",placeholder="بيان اختياري") }}</div>
+  <div class="inline-note">لا يمكن تكرار الصرف لنفس المستفيد والصنف داخل الفترة نفسها. الصرف المجاني يدخل ضمن تقرير إقفال الإنتاج.</div>
+  <div class="dialog-actions"><button class="primary-button button-wide" type="submit" data-loading-label="جارٍ تسجيل الصرف...">تسجيل الصرف</button><a class="secondary-button" href="{{ url_for('operations.free_distribution') }}">إلغاء</a></div>
+ </form>
+</dialog>
+{% endblock %}
