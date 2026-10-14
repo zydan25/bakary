@@ -57,6 +57,13 @@ def index():
         "signed_amount": movement.amount if movement.direction == "in" else -movement.amount,
     } for movement in movements]
     account_form = CashAccountForm()
+    edit_id = request.args.get("edit", type=int)
+    editing_account = db.session.get(CashAccount, edit_id) if edit_id else None
+    if editing_account is not None:
+        account_form.name.data = editing_account.name
+        account_form.code.data = editing_account.code
+        account_form.account_type.data = editing_account.account_type
+        account_form.opening_balance.data = 0
     return render_template(
         "finance/index.html",
         balance_rows=balance_rows,
@@ -65,7 +72,8 @@ def index():
         can_manage_accounts=current_user.has_permission("cash.accounts.manage"),
         can_manage_expenses=current_user.has_permission("expenses.manage"),
         can_manage_transfers=current_user.has_permission("finance.manage"),
-        show_account_form=request.args.get("action") == "new",
+        show_account_form=request.args.get("action") == "new" or editing_account is not None,
+        editing_account_id=editing_account.id if editing_account else None,
     )
 
 
@@ -97,7 +105,60 @@ def add_account():
         can_manage_expenses=current_user.has_permission("expenses.manage"),
         can_manage_transfers=current_user.has_permission("finance.manage"),
         show_account_form=True,
+        editing_account_id=None,
     )
+
+
+@finance_bp.route("/accounts/<int:account_id>/edit", methods=["POST"])
+@login_required
+def edit_account(account_id):
+    _require_any("cash.accounts.manage")
+    account = db.session.get(CashAccount, account_id)
+    if account is None:
+        abort(404)
+    form = CashAccountForm()
+    if form.validate_on_submit():
+        name = (form.name.data or "").strip()
+        code = (form.code.data or "").strip().upper() or account.code
+        duplicate = db.session.scalar(select(CashAccount.id).where(
+            CashAccount.id != account.id,
+            (CashAccount.name == name) | (CashAccount.code == code),
+        ))
+        if duplicate:
+            flash("اسم الحساب أو رمزه مستخدم بالفعل.", "error")
+        else:
+            account.name = name
+            account.code = code
+            account.account_type = form.account_type.data
+            db.session.commit()
+            flash("تم تحديث بيانات الحساب النقدي دون تغيير سجل حركاته.", "success")
+            return redirect(url_for("finance.index"))
+    flash("تعذر تعديل الحساب؛ تحقق من البيانات وحاول مجددًا.", "error")
+    return redirect(url_for("finance.index", edit=account.id))
+
+
+@finance_bp.post("/accounts/<int:account_id>/delete")
+@login_required
+def delete_account(account_id):
+    _require_any("cash.accounts.manage")
+    account = db.session.get(CashAccount, account_id)
+    if account is None:
+        abort(404)
+    if account.is_main:
+        flash("لا يمكن حذف الصندوق الرئيسي.", "error")
+        return redirect(url_for("finance.index"))
+    has_movements = bool(db.session.scalar(
+        select(func.count()).select_from(CashMovement).where(CashMovement.cash_account_id == account.id)
+    ))
+    if has_movements:
+        account.is_active = False
+        db.session.commit()
+        flash("لأن الحساب يحتوي حركات مالية، تم إيقافه مع الاحتفاظ بالسجل المالي.", "success")
+    else:
+        db.session.delete(account)
+        db.session.commit()
+        flash("تم حذف الحساب النقدي نهائيًا.", "success")
+    return redirect(url_for("finance.index"))
 
 
 @finance_bp.route("/expenses/", methods=["GET", "POST"])
